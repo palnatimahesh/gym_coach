@@ -19,6 +19,14 @@
           if (expect === 1 && document.getElementById('subtabs').style.display !== 'none') errs.push('subtabs visible on ' + p);
         });
         if (document.querySelectorAll('.nav-item').length !== 5) errs.push('tab count');
+        navigate('dashboard');
+        var dash = document.getElementById('dashboard-content');
+        if (dash.querySelectorAll('.ring-arc').length !== 3) errs.push('expected 3 rings, got ' + dash.querySelectorAll('.ring-arc').length);
+        if (dash.innerHTML.indexOf('Morning check-in') === -1) errs.push('check-in card missing');
+        Readiness.QUESTIONS.forEach(function(q) { checkinPick(q.id, q.opts.length - 1); });
+        if (dash.innerHTML.indexOf('Morning check-in') !== -1) errs.push('check-in card still shown after answering');
+        if (!Readiness.getToday() || Readiness.getToday().score !== 100) errs.push('check-in not saved');
+        if (dash.innerHTML.indexOf('Redo check-in') === -1) errs.push('redo link missing');
         function tap(sec, expectPage) {
           document.querySelector('[data-section="' + sec + '"]').click();
           if (STATE.currentPage !== expectPage) errs.push(sec + ' tab went to ' + STATE.currentPage + ', expected ' + expectPage);

@@ -321,6 +321,66 @@
     eq(set.reps, '45');
   });
 
+  /* ---------- readiness / effort / rings ---------- */
+  var BEST = { sleep: 4, energy: 2, soreness: 2, stress: 2 };
+  var WORST = { sleep: 0, energy: 0, soreness: 0, stress: 0 };
+  t('readiness score and validation', function() {
+    eq(Readiness.scoreFor(BEST), 100); eq(Readiness.scoreFor(WORST), 21);
+    eq(Readiness.scoreFor({ sleep: 1 }), null);
+    eq(Readiness.scoreFor({ sleep: 9, energy: 0, soreness: 0, stress: 0 }), null);
+    eq(Readiness.scoreFor(null), null);
+  });
+  t('readiness zones', function() {
+    eq(Readiness.zoneOf(33), 'red'); eq(Readiness.zoneOf(34), 'yellow');
+    eq(Readiness.zoneOf(66), 'yellow'); eq(Readiness.zoneOf(67), 'green');
+  });
+  t('check-in drives the training plan and can be redone', function() {
+    reset(); STATE.phase = 2; STATE.weekInPhase = 3;
+    eq(Readiness.getToday(), null);
+    var r = Readiness.saveCheckin(WORST);
+    eq(r.zone, 'red');
+    eq(Readiness.getToday().score, 21);
+    var m = Progression.getSessionModel();
+    eq(m.readiness, 'red'); eq(m.setsMult, 0.5); ok(m.reduced, 'reduced');
+    Readiness.clearToday();
+    eq(Readiness.getToday(), null); eq(Progression.getSessionModel().readiness, 'green');
+    eq(Readiness.saveCheckin({ sleep: 1 }), null, 'incomplete not saved');
+  });
+  t('effort grows with work and stays within 0-21', function() {
+    reset(); var d = HistoryStore.localDate();
+    eq(Readiness.dayEffort(d), 0);
+    seed(d, 'squat', sets(100, [5]), { doneSets: 20, duration: 2700 });
+    eq(Readiness.dayEffort(d), 7.6);
+    reset(); seed(d, 'squat', sets(100, [5]), { doneSets: 40, duration: 3600 });
+    eq(Readiness.dayEffort(d), 11.7);
+    reset(); seed(d, 'squat', sets(100, [5]), { doneSets: 5000, duration: 360000 });
+    ok(Readiness.dayEffort(d) <= 21, 'capped');
+    reset(); Store.save('runLog', [d]);
+    eq(Readiness.dayEffort(d), 7.2);
+  });
+  t('target effort from RPE', function() {
+    eq(Readiness.targetEffort('7-8'), { low: 10, high: 12 });
+    eq(Readiness.targetEffort('5-6'), { low: 6, high: 8 });
+    eq(Readiness.targetEffort('9'), { low: 13, high: 15 });
+    eq(Readiness.targetEffort('x'), null);
+  });
+  t('week consistency', function() {
+    reset(); STATE.phase = 2;
+    var c0 = Readiness.consistency();
+    ok(c0.planned > 0, 'planned'); eq(c0.done, 0);
+    STATE.completedWorkouts = [HistoryStore.localDate(), HistoryStore.localDate()];
+    var c1 = Readiness.consistency();
+    eq(c1.done, 1, 'dedupes dates'); eq(c1.pct, Math.round(100 / c1.planned));
+  });
+  t('rings clamp and escape', function() {
+    var full = Rings.ring({ pct: 150, display: '1', label: 'A' });
+    ok(full.indexOf('stroke-dashoffset="0.00"') !== -1, 'clamped high');
+    var empty = Rings.ring({ pct: -5, display: '0', label: 'A' });
+    ok(empty.indexOf('stroke-dashoffset="0.00"') === -1, 'clamped low');
+    ok(Rings.ring({ pct: NaN, display: '0', label: 'A' }).indexOf('NaN') === -1, 'NaN safe');
+    ok(Rings.ring({ pct: 5, display: '<b>', label: '<i>' }).indexOf('<b>') === -1, 'escaped');
+  });
+
   /* ---------- navigation ---------- */
   t('every page belongs to exactly one section', function() {
     PAGES.forEach(function(p) {

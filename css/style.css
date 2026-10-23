@@ -825,3 +825,20 @@ input[type='range']::-moz-range-thumb { width:18px; height:18px; border-radius:5
 .subtabs { position: sticky; top: 0; z-index: 90; display: flex; gap: 4px; max-width: 480px; margin: 0 auto; padding: 10px 16px 6px; background: linear-gradient(var(--bg-primary) 75%, transparent); }
 .subtab { flex: 1; padding: 8px 4px; border: none; border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-muted); font-family: var(--font); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: var(--transition); }
 .subtab.active { background: var(--accent-dim); color: var(--accent); }
+
+/*  RINGS + CHECK-IN  */
+.rings-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; justify-items: center; }
+.ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.ring { position: relative; }
+.ring-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.ring-value { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.ring-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); }
+.ring-sub { font-size: 0.72rem; color: var(--text-muted); }
+.ring-arc { animation: ring-in 0.9s ease-out; }
+@keyframes ring-in { from { stroke-dashoffset: var(--c); } }
+@media (prefers-reduced-motion: reduce) { .ring-arc { animation: none; } }
+.coach-line { font-size: 0.85rem; color: var(--text-secondary); text-align: center; margin-top: 12px; padding: 0 8px; }
+.link-btn { display: block; margin: 6px auto 0; background: none; border: none; color: var(--text-muted); font-size: 0.72rem; text-decoration: underline; cursor: pointer; font-family: var(--font); }
+.checkin-q { margin-bottom: 10px; }
+.checkin-label { font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+.chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
