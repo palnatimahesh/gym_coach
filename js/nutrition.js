@@ -199,7 +199,7 @@ function renderFoodToday(T) {
     '</div>';
   }).join('') + '</div>' : '<p style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:8px 0 16px">Nothing logged yet today.</p>';
 
-  return '<div class="card mb-12" style="padding:16px">' + rings + '</div>' + form + log;
+  return '<div class="card mb-12" style="padding:16px">' + rings + '</div>' + FoodSearch.card() + form + log;
 }
 
 function foodAdd() {

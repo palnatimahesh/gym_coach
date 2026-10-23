@@ -137,6 +137,7 @@ function renderSettings() {
       '<input type="file" id="import-file-input" accept=".json,application/json,text/plain" style="display:none" onchange="importData(this)">' +
       '<div id="import-result" style="margin-top:6px"></div>' +
       '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">' +
+        '<button class="link-btn" onclick="Onboarding.restart()">Redo setup</button>' +
         '<div style="text-align:center;font-size:0.72rem;color:var(--text-muted);margin:12px 0">Version ' + esc(APP_VERSION) + '</div>' +
       '<button class="btn btn-ghost btn-full" style="color:var(--red);border-color:rgba(239,68,68,0.3)" onclick="resetAllData()">Reset All Data</button>' +
       '</div>' +
@@ -160,6 +161,7 @@ function renderRemindersCard() {
     row('Training reminder', toggle(r.train.on, 'setReminder(\'train\',\'on\',this.checked)')) +
     (r.train.on ? row('Time', '<input type="time" value="' + esc(r.train.time) + '" onchange="setReminder(\'train\',\'time\',this.value)" style="width:auto">') : '') +
     row('Water reminders (10:00 - 20:00)', toggle(r.water.on, 'setReminder(\'water\',\'on\',this.checked)')) +
+    row('Weekly backup reminder (Sunday 20:00)', toggle(r.backup.on, 'setReminder(\'backup\',\'on\',this.checked)')) +
     '<p style="font-size:0.75rem;color:var(--text-muted);margin-top:6px">Reminders are scheduled by Android, so they arrive even when the app is closed.</p>' +
   '</div>';
 }

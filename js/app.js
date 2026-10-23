@@ -213,6 +213,7 @@ var Store = {
       STATE.settings[k] = savedSettings[k];
     });
     updateStreak();
+    if (typeof Plan !== 'undefined') Plan.apply();
     if (typeof Progression !== 'undefined') Progression.syncWeek();
   },
   saveAll: function() {
@@ -576,6 +577,7 @@ document.addEventListener('DOMContentLoaded', function() {
   navigate('dashboard');
   setupNavigation();
   Native.init();
+  Onboarding.maybeStart();
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {

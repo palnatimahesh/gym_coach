@@ -39,6 +39,11 @@ var Native = (function() {
   function onPause() { AutoBackup.run('pause', false); }
 
   function handleBack() {
+    var layers = ['plan-modal', 'media-modal', 'onb-modal'];
+    for (var i = 0; i < layers.length; i++) {
+      var layer = el(layers[i]);
+      if (layer) { layer.parentNode.removeChild(layer); return; }
+    }
     var swap = el('swap-modal');
     if (swap && swap.classList.contains('open')) { closeSwapModal(); return; }
     var guided = el('guided-overlay');
@@ -105,7 +110,8 @@ var Notify = (function() {
     var r = Store.get('reminders', null) || {};
     return {
       train: { on: !!(r.train && r.train.on), time: (r.train && r.train.time) || '17:30' },
-      water: { on: !!(r.water && r.water.on) }
+      water: { on: !!(r.water && r.water.on) },
+      backup: { on: !!(r.backup && r.backup.on) }
     };
   }
 
@@ -123,6 +129,10 @@ var Notify = (function() {
       WATER_HOURS.forEach(function(hr, i) {
         list.push({ id: 10 + i, title: 'Drink water', body: 'Keep your hydration on track today.', schedule: { on: { hour: hr, minute: 0 }, allowWhileIdle: true } });
       });
+    }
+    if (rem.backup && rem.backup.on) {
+      /* weekday 1 = Sunday */
+      list.push({ id: 20, title: 'Weekly backup', body: 'Share your backup to Drive or Files so your data is safe.', schedule: { on: { weekday: 1, hour: 20, minute: 0 }, allowWhileIdle: true } });
     }
     return list;
   }

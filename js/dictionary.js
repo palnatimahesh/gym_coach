@@ -93,7 +93,7 @@ function renderExerciseDetail(ex) {
   var hasPR  = STATE.personalRecords[ex.id];
   var units  = STATE.settings.units;
   var muscle = (ex.muscle || '').replace(/_/g, ' ');
-  var html   = '';
+  var html   = ExerciseMedia.block(ex.id);
 
   // Stats row
   html +=

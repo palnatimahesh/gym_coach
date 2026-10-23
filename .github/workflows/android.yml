@@ -49,6 +49,24 @@ jobs:
       - name: Create Android project
         run: npx cap add android
 
+      # Permanent signing key (GitHub secrets). Without it the build falls back to a temporary debug key.
+      - name: Prepare release signing
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KS_B64" ] && [ -n "$KS_PASSWORD" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.p12"
+            ALIAS=$(keytool -list -keystore "$RUNNER_TEMP/release.p12" -storetype PKCS12 -storepass "$KS_PASSWORD" 2>/dev/null | awk -F', ' '/PrivateKeyEntry/{print $1; exit}')
+            if [ -z "$ALIAS" ]; then echo "Could not read the key alias from the keystore"; exit 1; fi
+            echo "KS_PATH=$RUNNER_TEMP/release.p12" >> "$GITHUB_ENV"
+            echo "KS_PASS=$KS_PASSWORD" >> "$GITHUB_ENV"
+            echo "KS_ALIAS=$ALIAS" >> "$GITHUB_ENV"
+            echo "SIGNED=true" >> "$GITHUB_ENV"
+          else
+            echo "No signing secrets found: using the debug key"
+          fi
+
       - name: Patch Android project (minSdk 26 for Health Connect, version numbers)
         env:
           RUN_NUMBER: ${{ github.run_number }}
@@ -60,9 +78,10 @@ jobs:
       - name: Sync web assets and plugins
         run: npx cap sync android
 
-      - name: Build debug APK
+      - name: Build APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: |
+          if [ "$SIGNED" = "true" ]; then ./gradlew assembleRelease --no-daemon; else ./gradlew assembleDebug --no-daemon; fi
 
       - name: Save signing key
         if: steps.key.outputs.cache-hit != 'true'
@@ -72,7 +91,8 @@ jobs:
           key: debug-keystore-v1
 
       - name: Name the APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk athletic-coach.apk
+        run: |
+          if [ "$SIGNED" = "true" ]; then cp android/app/build/outputs/apk/release/app-release.apk athletic-coach.apk; else cp android/app/build/outputs/apk/debug/app-debug.apk athletic-coach.apk; fi
 
       - uses: actions/upload-artifact@v4
         with:

@@ -850,3 +850,27 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 .bottom-nav { padding-bottom: var(--safe-bottom); }
 
 .seg { display: flex; gap: 4px; margin-bottom: 12px; }
+
+/*  EXERCISE MEDIA, PLAN EDITOR, ONBOARDING  */
+.ex-media { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #fff; border-radius: var(--radius-md); overflow: hidden; margin-bottom: 8px; }
+.ex-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.ex-media .ex-media-b { animation: ex-flip 2s steps(1) infinite; }
+@keyframes ex-flip { 0%, 49.99% { opacity: 0; } 50%, 100% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ex-media .ex-media-b { animation: none; opacity: 0; } }
+.plan-head { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin: 14px 0 6px; }
+.plan-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.plan-name { flex: 1; min-width: 0; font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-row input { width: 46px; padding: 6px 4px; text-align: center; }
+.plan-row span { color: var(--text-muted); font-size: 0.8rem; }
+.plan-btn { background: var(--bg-input); color: var(--text-secondary); border: none; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; font-size: 0.8rem; }
+.plan-add { display: flex; gap: 8px; margin-top: 8px; }
+.plan-add select { flex: 1; }
+.onb-overlay { position: fixed; inset: 0; z-index: 500; background: var(--bg-primary); display: flex; align-items: center; justify-content: center; padding: calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom)); overflow-y: auto; }
+.onb-card { width: 100%; max-width: 440px; }
+.onb-dots { display: flex; gap: 6px; margin-bottom: 20px; }
+.onb-dots span { flex: 1; height: 4px; border-radius: 100px; background: rgba(255,255,255,0.1); }
+.onb-dots span.on { background: var(--accent); }
+.onb-opt { display: block; width: 100%; text-align: left; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px; margin-bottom: 8px; color: var(--text-primary); font-family: var(--font); cursor: pointer; }
+.onb-opt.active { border-color: var(--accent); background: var(--accent-dim); }
+.onb-opt-title { font-weight: 700; font-size: 0.95rem; }
+.onb-opt-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }

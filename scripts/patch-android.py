@@ -20,6 +20,24 @@ def sub_required(path, pattern, repl, label):
     path.write_text(new, encoding="utf-8")
 
 
+def configure_signing(app_gradle):
+    """Release signing from KS_* env vars (set by CI when the keystore secrets exist)."""
+    block = (
+        "signingConfigs {\n"
+        "        release {\n"
+        "            storeFile file(System.getenv('KS_PATH'))\n"
+        "            storePassword System.getenv('KS_PASS')\n"
+        "            keyAlias System.getenv('KS_ALIAS')\n"
+        "            keyPassword System.getenv('KS_PASS')\n"
+        "            storeType 'pkcs12'\n"
+        "        }\n"
+        "    }\n"
+        "    buildTypes {"
+    )
+    sub_required(app_gradle, r"buildTypes\s*\{", lambda m: block, "buildTypes")
+    sub_required(app_gradle, r"(buildTypes\s*\{\s*release\s*\{)", lambda m: m.group(1) + "\n            signingConfig signingConfigs.release", "release build type")
+
+
 def main():
     version_js = pathlib.Path("js/version.js").read_text(encoding="utf-8")
     match = re.search(r"APP_VERSION\s*=\s*'([^']+)'", version_js)
@@ -34,6 +52,9 @@ def main():
     app_gradle = ROOT / "app" / "build.gradle"
     sub_required(app_gradle, r"versionCode\s+\d+", "versionCode %s" % run_number, "versionCode")
     sub_required(app_gradle, r'versionName\s+"[^"]*"', 'versionName "%s"' % version_name, "versionName")
+    if os.environ.get("KS_PATH"):
+        configure_signing(app_gradle)
+        print("release signing configured")
     print("patched: minSdk 26, versionCode %s, versionName %s" % (run_number, version_name))
 
 

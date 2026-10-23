@@ -6,6 +6,8 @@
   window.addEventListener('load', function() {
     setTimeout(function() {
       try {
+        if (!document.getElementById('onb-modal')) errs.push('onboarding did not start on a fresh install');
+        Onboarding.skip();
         PAGES.forEach(function(p) {
           navigate(p);
           var c = document.getElementById(p + '-content');
@@ -28,6 +30,15 @@
         setNutritionTab('today');
         document.getElementById('food-name').value = 'Smoke meal'; document.getElementById('food-kcal').value = '500'; foodAdd();
         if (FoodLog.totals().kcal !== 500) errs.push('food add failed');
+        navigate('workout');
+        var li = -1;
+        PROGRAMS.phases[STATE.phase].schedule.forEach(function(s, i) { if (li < 0 && s.exercises && s.exercises.length) li = i; });
+        Plan.openEditor(li);
+        if (!document.querySelector('#plan-modal .plan-row')) errs.push('plan editor empty');
+        Plan.closeEditor();
+        ExerciseMedia.open('squat');
+        if (!document.getElementById('media-modal')) errs.push('media modal missing');
+        ExerciseMedia.close();
         navigate('dashboard');
         var dash = document.getElementById('dashboard-content');
         if (dash.querySelectorAll('.ring-arc').length !== 3) errs.push('expected 3 rings, got ' + dash.querySelectorAll('.ring-arc').length);

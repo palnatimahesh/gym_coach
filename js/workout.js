@@ -174,6 +174,7 @@ function renderSessionSelector(phase, session) {
       }
 
       html += '<button class="btn btn-primary btn-full btn-sm mt-12" onclick="startSession(' + i + ')">' + icon('play', 14) + ' Start' + (modeInfo && modeInfo.substituted > 0 ? ' (' + modeInfo.substituted + ' auto-swapped)' : '') + '</button>';
+      html += '<button class="link-btn" onclick="Plan.openEditor(' + i + ')">Edit exercises' + (Plan.isEdited(STATE.phase, i) ? ' (customised)' : '') + '</button>';
       html += '</div>';
     }
 
@@ -284,6 +285,7 @@ function renderActiveSession() {
             (isCore ? '<span class="badge badge-green">Core</span>' : '') +
             (ex._round ? '<span class="badge badge-accent">Round ' + ex._round + '/' + ex._rounds + '</span>' : '') +
             (!isCore ? '<span class="badge badge-muted">RPE ' + model.rpe + '</span>' : '') +
+            '<button class="badge badge-blue" style="border:none;cursor:pointer" onclick="ExerciseMedia.open(\'' + ex.id + '\')">Form</button>' +
           '</div>' +
         '</div>' +
       '</div>' +

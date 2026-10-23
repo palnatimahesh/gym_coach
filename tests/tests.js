@@ -641,6 +641,113 @@
     eq(s['2026-10-20'].hrv, 60); eq(s['2026-10-20'].rhr, 50); eq(Object.keys(s).length, 1);
   });
 
+  /* ---------- plan editor, media, onboarding, food search ---------- */
+  t('plan editor: save, validate, apply, reset', function() {
+    reset(); Plan.apply();
+    var day = -1;
+    PROGRAMS.phases[1].schedule.forEach(function(s, i) { if (day < 0 && s.exercises && s.exercises.length > 2) day = i; });
+    ok(day >= 0, 'a lifting day exists');
+    var orig = JSON.parse(JSON.stringify(PROGRAMS.phases[1].schedule[day].exercises));
+    var main = orig.slice(0, 2).map(function(e) { return { id: e.id, sets: 5, reps: '5' }; });
+    ok(Plan.save(1, day, main, []).ok, 'saved');
+    eq(PROGRAMS.phases[1].schedule[day].exercises.length, 2); eq(PROGRAMS.phases[1].schedule[day].exercises[0].sets, 5);
+    ok(Plan.isEdited(1, day), 'edited flag');
+    ok(Plan.save(1, day, [{ id: 'nope', sets: 3, reps: '8' }], []).error, 'unknown exercise rejected');
+    ok(Plan.save(1, day, [{ id: main[0].id, sets: 99, reps: '8' }], []).error, 'bad sets rejected');
+    eq(PROGRAMS.phases[1].schedule[day].exercises.length, 2, 'failed saves change nothing');
+    eq(Plan.cleanRow({ id: main[0].id, sets: '3', reps: '<script>8' }).reps, 'script8', 'reps sanitised');
+    Plan.reset(1, day);
+    eq(PROGRAMS.phases[1].schedule[day].exercises, orig); eq(Plan.isEdited(1, day), false);
+    reset(); Plan.apply();
+  });
+  t('plan edits survive an apply() and a backup restore', function() {
+    reset(); Plan.apply();
+    var day = -1;
+    PROGRAMS.phases[2].schedule.forEach(function(s, i) { if (day < 0 && s.exercises && s.exercises.length > 1) day = i; });
+    var first = PROGRAMS.phases[2].schedule[day].exercises[0];
+    Plan.save(2, day, [{ id: first.id, sets: 4, reps: '6' }], []);
+    var b = buildBackup();
+    Plan.reset(2, day);
+    eq(PROGRAMS.phases[2].schedule[day].exercises.length > 1, true);
+    ok(restoreBackup(JSON.stringify(b)).ok, 'restore');
+    eq(PROGRAMS.phases[2].schedule[day].exercises.length, 1, 'edit re-applied');
+    reset(); Plan.apply();
+  });
+  t('exercise media', function() {
+    var f = ExerciseMedia.frames('squat');
+    eq(f.length, 2); ok(/0\.jpg$/.test(f[0]) && /1\.jpg$/.test(f[1]), 'frames');
+    ok(ExerciseMedia.videoUrl('overhead_press').indexOf('youtube.com/results') !== -1, 'youtube');
+    ok(ExerciseMedia.videoUrl('overhead_press').indexOf('OHP') === -1, 'brackets stripped');
+    Object.keys(EXERCISE_MEDIA.map).forEach(function(id) { ok(EXERCISES[id], 'media for unknown exercise ' + id); });
+    ok(ExerciseMedia.block('squat').indexOf('Watch form video') !== -1, 'button');
+    ok(ExerciseMedia.block('wall_sit').indexOf('ex-media') === -1, 'no image when unmapped');
+  });
+  t('onboarding sets level, goal, body, mode and starting phase', function() {
+    reset(); STATE.phase = 0; STATE.completedWorkouts = [];
+    ok(Onboarding.needed(), 'needed on a fresh install');
+    Onboarding.start();
+    ok(document.getElementById('onb-modal'), 'overlay');
+    Onboarding.pick('level', 'experienced'); Onboarding.next();
+    Onboarding.pick('goal', 'cut'); Onboarding.next();
+    document.getElementById('onb-weight').value = '82'; document.getElementById('onb-height').value = '178'; document.getElementById('onb-age').value = '30';
+    Onboarding.next();
+    Onboarding.pick('mode', 'home'); Onboarding.next();
+    eq(STATE.phase, 2); eq(STATE.weekInPhase, 1);
+    eq(STATE.settings.level, 'experienced'); eq(STATE.settings.nutritionGoal, 'cut');
+    eq(STATE.settings.bodyWeight, 82); eq(STATE.mode, 'home');
+    Onboarding.next();
+    eq(Store.get('onboarded'), true); eq(document.getElementById('onb-modal'), null);
+    STATE.mode = 'gym';
+  });
+  t('onboarding rejects bad stats and never interrupts existing users', function() {
+    reset(); STATE.phase = 0; Onboarding.start(); Onboarding.next(); Onboarding.next();
+    document.getElementById('onb-weight').value = '5'; Onboarding.next();
+    ok(document.getElementById('onb-weight'), 'stays on the body step');
+    Onboarding.skip();
+    reset(); STATE.phase = 3;
+    eq(Onboarding.needed(), false); eq(Store.get('onboarded'), true);
+    reset(); STATE.phase = 0; seed(daysAgo(1), 'squat', sets(100, [5]));
+    eq(Onboarding.needed(), false, 'has history');
+  });
+  t('food search: normalize and scale', function() {
+    var p = FoodSearch.normalize({ product_name: ' Oats ', brands: 'A, B', serving_quantity: '40', nutriments: { 'energy-kcal_100g': 370, proteins_100g: 13, carbohydrates_100g: 60, fat_100g: 7 } });
+    eq(p.name, 'Oats'); eq(p.brand, 'A'); eq(p.servingG, 40); eq(p.kcal, 370);
+    eq(FoodSearch.normalize({ product_name: 'KJ only', nutriments: { energy_100g: 418.4 } }).kcal, 100, 'kJ converted');
+    eq(FoodSearch.normalize({ product_name: 'Macros', nutriments: { proteins_100g: 10, carbohydrates_100g: 10, fat_100g: 10 } }).kcal, 170, 'kcal from macros');
+    eq(FoodSearch.normalize({ product_name: '', nutriments: { proteins_100g: 1 } }), null, 'no name');
+    eq(FoodSearch.normalize({ product_name: 'x', nutriments: {} }), null, 'no data');
+    eq(FoodSearch.normalize(null), null);
+    eq(FoodSearch.scale({ kcal: 370, p: 13, c: 60, f: 7 }, 50), { kcal: 185, p: 6.5, c: 30, f: 3.5 });
+  });
+  ta('food search: query, barcode and error handling (stubbed network)', function() {
+    var real = FoodSearch.getJson, lastUrl = '';
+    function restore() { FoodSearch.getJson = real; }
+    FoodSearch.getJson = function(url) {
+      lastUrl = url;
+      if (url.indexOf('/api/v2/product/') !== -1) return Promise.resolve(url.indexOf('111111') !== -1 ? { status: 1, product: { product_name: 'Bar', nutriments: { 'energy-kcal_100g': 400 } } } : { status: 0 });
+      return Promise.resolve({ products: [{ product_name: 'Oats <b>', nutriments: { 'energy-kcal_100g': 370 } }, { product_name: '', nutriments: {} }, { product_name: 'Empty' }] });
+    };
+    return FoodSearch.search('rolled oats').then(function(list) {
+      eq(list.length, 1, 'unusable products dropped'); eq(list[0].name, 'Oats <b>');
+      ok(lastUrl.indexOf('search_terms=rolled%20oats') !== -1, 'query encoded');
+      var host = document.createElement('div'); host.id = 'food-results'; document.body.appendChild(host);
+      FoodSearch.setResults(list);
+      ok(host.innerHTML.indexOf('&lt;b&gt;') !== -1 && host.innerHTML.indexOf('<b>') === -1, 'external name escaped');
+      document.body.removeChild(host);
+      return FoodSearch.search('a').then(function() { throw new Error('short query accepted'); }, function() {});
+    }).then(function() {
+      return FoodSearch.byBarcode('111111').then(function(p) { eq(p.name, 'Bar'); });
+    }).then(function() {
+      return FoodSearch.byBarcode('999999').then(function() { throw new Error('missing product accepted'); }, function(e) { ok(/not found/i.test(e.message), 'not found message'); });
+    }).then(function() {
+      return FoodSearch.byBarcode('12ab').then(function() { throw new Error('bad barcode accepted'); }, function() {});
+    }).then(restore, function(e) { restore(); throw e; });
+  });
+  t('weekly backup reminder plan', function() {
+    var p = Notify.plan({ train: { on: false, time: '17:30' }, water: { on: false }, backup: { on: true } });
+    eq(p.length, 1); eq(p[0].schedule.on.weekday, 1);
+  });
+
   /* ---------- navigation ---------- */
   t('every page belongs to exactly one section', function() {
     PAGES.forEach(function(p) {

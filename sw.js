@@ -13,7 +13,7 @@ var STATIC_ASSETS = [
   './data/recovery.js', './data/history.js', './data/progression.js', './data/readiness.js',
   './js/version.js', './js/sound.js', './js/native.js', './js/health.js', './js/autobackup.js', './js/app.js', './js/rings.js', './js/dashboard.js', './js/program.js', './js/setlog.js',
   './js/workout.js', './js/dictionary.js', './js/warmup.js', './js/running.js', './js/recovery.js',
-  './js/history.js', './js/charts.js', './js/progress.js', './js/foodlog.js', './js/nutrition.js', './js/tools.js', './js/settings.js',
+  './js/history.js', './js/charts.js', './js/progress.js', './js/foodlog.js', './js/foodsearch.js', './js/media.js', './js/planedit.js', './js/onboarding.js', './data/exercise-media.js', './js/nutrition.js', './js/tools.js', './js/settings.js',
   './icons/icon-192.png', './icons/icon-512.png'
 ];
 
@@ -38,7 +38,8 @@ self.addEventListener('activate', function(event) {
 });
 
 function isFont(url) {
-  return url.indexOf('fonts.googleapis.com') !== -1 || url.indexOf('fonts.gstatic.com') !== -1;
+  return url.indexOf('fonts.googleapis.com') !== -1 || url.indexOf('fonts.gstatic.com') !== -1 ||
+         url.indexOf('raw.githubusercontent.com/yuhonas/free-exercise-db') !== -1;   // exercise demo images work offline after first view
 }
 
 self.addEventListener('fetch', function(event) {
