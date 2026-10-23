@@ -4,10 +4,16 @@
   "private": true,
   "description": "Athletic Coach - Android wrapper (built in GitHub Actions)",
   "dependencies": {
-    "@capacitor/android": "^8.0.0",
-    "@capacitor/core": "^8.0.0"
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/filesystem": "^8.0.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/local-notifications": "^8.0.0",
+    "@capgo/capacitor-health": "^8.0.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.0.0"
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.4.0"
   }
 }

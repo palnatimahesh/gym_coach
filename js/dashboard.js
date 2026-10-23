@@ -21,6 +21,7 @@ var COACH_TIPS = [
 ];
 
 var CheckinDraft = {};
+var CheckinOpen = false;   // show the check-in card even when wearable data already gives a score
 
 function renderDashboard() {
   var phase    = PROGRAMS.phases[STATE.phase];
@@ -51,8 +52,9 @@ function renderDashboard() {
     '</div>' +
 
     Progression.renderBanners() +
-    (ready ? '' : renderCheckinCard()) +
+    ((ready && !CheckinOpen) ? '' : renderCheckinCard()) +
     renderRings(ready) +
+    renderHealthRow() +
 
     /* Today's session: the one primary action */
     '<div style="background:rgba(' + phRgb + ',0.08);border:1px solid rgba(' + phRgb + ',0.25);border-radius:var(--radius-xl);padding:16px;margin-bottom:14px">' +
@@ -106,7 +108,8 @@ function renderRings(ready) {
   return '<div class="card mb-12" style="padding:16px 12px">' +
     '<div class="rings-row">' + rings + '</div>' +
     '<p class="coach-line">' + esc(Readiness.coachLine()) + '</p>' +
-    (ready && ready.source === 'checkin' ? '<button class="link-btn" onclick="redoCheckin()">Redo check-in</button>' : '') +
+    (ready && ready.source === 'health' ? '<button class="link-btn" onclick="openCheckin()">Add how you feel</button>' : '') +
+    (ready && ready.source !== 'health' ? '<button class="link-btn" onclick="redoCheckin()">Redo check-in</button>' : '') +
   '</div>';
 }
 
@@ -129,6 +132,7 @@ function checkinPick(qid, idx) {
   if (Readiness.scoreFor(CheckinDraft) !== null) {
     var res = Readiness.saveCheckin(CheckinDraft);
     CheckinDraft = {};
+    CheckinOpen = false;
     if (res) showToast('Readiness ' + res.score + ' - ' + Readiness.ZONES[res.zone].label, 'success');
   }
   renderDashboard();
@@ -137,7 +141,28 @@ function checkinPick(qid, idx) {
 function redoCheckin() {
   Readiness.clearToday();
   CheckinDraft = {};
+  CheckinOpen = true;
   renderDashboard();
+}
+
+function openCheckin() {
+  CheckinOpen = true;
+  renderDashboard();
+}
+
+/* Sleep / steps / HRV / resting HR from Health Connect, when connected and available */
+function renderHealthRow() {
+  var t = Health.today();
+  if (!t) return '';
+  var items = [];
+  if (t.sleepH !== undefined) items.push(['Sleep', t.sleepH + 'h']);
+  if (t.hrv !== undefined)    items.push(['HRV', Math.round(t.hrv) + ' ms']);
+  if (t.rhr !== undefined)    items.push(['Resting HR', Math.round(t.rhr) + ' bpm']);
+  if (t.steps !== undefined)  items.push(['Steps', t.steps.toLocaleString()]);
+  if (!items.length) return '';
+  return '<div class="stats-row mb-12">' + items.map(function(i) {
+    return '<div class="stat-tile"><div class="value" style="font-size:1.05rem">' + esc(i[1]) + '</div><div class="label">' + esc(i[0]) + '</div></div>';
+  }).join('') + '</div>';
 }
 
 /* ---- Water + last session ---- */

@@ -1,11 +1,17 @@
 /* Self-test for pure logic: log types, progression, week sync, backup, analytics. ES5. */
 (function() {
-  var results = [], fails = 0;
+  var results = [], fails = 0, pending = [], asyncTests = [];
 
+  /* fn may return a promise (async test) */
   function t(name, fn) {
-    try { fn(); results.push('PASS  ' + name); }
-    catch (e) { fails++; results.push('FAIL  ' + name + '  ::  ' + e.message); }
+    function pass() { results.push('PASS  ' + name); }
+    function fail(e) { fails++; results.push('FAIL  ' + name + '  ::  ' + (e && e.message ? e.message : e)); }
+    try {
+      var r = fn();
+      if (r && typeof r.then === 'function') pending.push(r.then(pass, fail)); else pass();
+    } catch (e) { fail(e); }
   }
+  function ta(name, fn) { asyncTests.push({ name: name, fn: fn }); }
   function eq(actual, expected, msg) {
     if (JSON.stringify(actual) !== JSON.stringify(expected)) {
       throw new Error((msg ? msg + ': ' : '') + 'expected ' + JSON.stringify(expected) + ' got ' + JSON.stringify(actual));
@@ -381,6 +387,153 @@
     ok(Rings.ring({ pct: 5, display: '<b>', label: '<i>' }).indexOf('<b>') === -1, 'escaped');
   });
 
+  /* ---------- health sync (pure parts) ---------- */
+  function at(y, mo, d, h, mi) { return new Date(y, mo, d, h, mi || 0).toISOString(); }
+  t('unionMinutes merges overlaps (two sources never double count)', function() {
+    var H = 3600000;
+    eq(Health.unionMinutes([[0, 8 * H], [1 * H, 7 * H]]), 480, 'nested');
+    eq(Health.unionMinutes([[0, 4 * H], [3 * H, 8 * H]]), 480, 'overlap');
+    eq(Health.unionMinutes([[0, H], [2 * H, 3 * H]]), 120, 'gap');
+    eq(Health.unionMinutes([]), 0);
+  });
+  t('summarize: sleep by wake date, ignores awake, merges sources', function() {
+    var s = Health.summarize({ sleep: [
+      { startDate: at(2026, 9, 19, 23, 0), endDate: at(2026, 9, 20, 3, 0), sleepState: 'light' },
+      { startDate: at(2026, 9, 20, 3, 0), endDate: at(2026, 9, 20, 3, 30), sleepState: 'awake' },
+      { startDate: at(2026, 9, 20, 3, 30), endDate: at(2026, 9, 20, 7, 0), sleepState: 'deep' },
+      { startDate: at(2026, 9, 19, 23, 0), endDate: at(2026, 9, 20, 7, 0), sleepState: 'sleeping' }
+    ] });
+    eq(Object.keys(s), ['2026-10-20']);
+    eq(s['2026-10-20'].sleepH, 8);
+  });
+  t('summarize: evening segment belongs to tomorrow', function() {
+    var s = Health.summarize({ sleep: [{ startDate: at(2026, 9, 19, 22, 0), endDate: at(2026, 9, 19, 23, 30), sleepState: 'light' }] });
+    eq(Object.keys(s), ['2026-10-20']);
+    eq(s['2026-10-20'].sleepH, 1.5);
+  });
+  t('summarize: steps, hrv and rhr per day', function() {
+    var s = Health.summarize({
+      steps: [{ startDate: at(2026, 9, 20, 0), value: 8123.4 }, { startDate: at(2026, 9, 21, 0), value: 100 }],
+      hrv: [{ startDate: at(2026, 9, 20, 5), endDate: at(2026, 9, 20, 5), value: 60 }, { startDate: at(2026, 9, 20, 6), endDate: at(2026, 9, 20, 6), value: 70 }],
+      rhr: [{ startDate: at(2026, 9, 20, 6), value: 51 }, { startDate: at(2026, 9, 20, 7), value: 0 }, { startDate: at(2026, 9, 20, 8), value: 'x' }]
+    });
+    eq(s['2026-10-20'].steps, 8123); eq(s['2026-10-20'].hrv, 65); eq(s['2026-10-20'].rhr, 51);
+    eq(s['2026-10-21'], { steps: 100 });
+  });
+  t('summarize tolerates junk', function() {
+    eq(Health.summarize({}), {});
+    eq(Health.summarize({ steps: [{ value: 5 }, { startDate: at(2026, 9, 20, 0), value: 'abc' }], sleep: [{ startDate: 'bad', endDate: 'bad' }] }), {});
+  });
+  t('health merge keeps old fields and caps history', function() {
+    var m = Health.merge({ '2026-10-20': { steps: 1, hrv: 50 } }, { '2026-10-20': { steps: 2 }, '2026-10-21': { sleepH: 7 } });
+    eq(m['2026-10-20'], { steps: 2, hrv: 50 }); eq(m['2026-10-21'], { sleepH: 7 });
+    var big = {}; for (var i = 0; i < 120; i++) big['2026-01-' + (i < 10 ? '0' : '') + i + 'x'] = { steps: i };
+    ok(Object.keys(Health.merge(big, {})).length <= 90, 'capped');
+  });
+  ta('browser: health and backup are inert', function() {
+    eq(Native.isNative(), false); eq(Health.available(), false); eq(AutoBackup.enabled(), false);
+    return Health.sync(true).then(function(r) { eq(r, null); return AutoBackup.run('x', true); }).then(function(r) { eq(r, false); });
+  });
+
+  /* ---------- readiness from health data ---------- */
+  function seedHealth(today, baseHrv, baseRhr, todayVals) {
+    var H = {};
+    for (var i = 1; i <= 10; i++) { H[daysAgo(i)] = { sleepH: 7.5, hrv: baseHrv + (i % 2 ? 1 : -1), rhr: baseRhr }; }
+    H[today] = todayVals;
+    Store.save('health', H);
+  }
+  t('readiness from health: sleep only without baseline', function() {
+    reset(); Store.save('health', (function() { var h = {}; h[HistoryStore.localDate()] = { sleepH: 7.5 }; return h; })());
+    var r = Readiness.getToday();
+    eq(r.score, 85); eq(r.source, 'health');
+  });
+  t('readiness from health: HRV above baseline raises score, below lowers it', function() {
+    reset(); var d = HistoryStore.localDate();
+    seedHealth(d, 60, 52, { sleepH: 7.5, hrv: 60, rhr: 52 });
+    var base = Readiness.getToday().score;
+    seedHealth(d, 60, 52, { sleepH: 7.5, hrv: 70, rhr: 52 });
+    var hi = Readiness.getToday().score;
+    seedHealth(d, 60, 52, { sleepH: 7.5, hrv: 50, rhr: 52 });
+    var lo = Readiness.getToday().score;
+    ok(hi > base && base > lo && base - lo > 10, 'hi ' + hi + ' base ' + base + ' lo ' + lo);
+    seedHealth(d, 60, 52, { sleepH: 7.5, hrv: 60, rhr: 60 });
+    ok(Readiness.getToday().score < base, 'elevated resting HR lowers score');
+  });
+  t('readiness: health leads (70%), check-in adjusts (30%)', function() {
+    reset(); var d = HistoryStore.localDate(), h = {}; h[d] = { sleepH: 7.5 }; Store.save('health', h);
+    Readiness.saveCheckin(BEST);
+    var r = Readiness.getToday();
+    eq(r.source, 'blend'); eq(r.score, 90);
+    ok(Progression.getSessionModel().readiness === 'green', 'green zone');
+  });
+  t('poor sleep from health reduces tomorrow training load automatically', function() {
+    reset(); var d = HistoryStore.localDate(), h = {}; h[d] = { sleepH: 4 }; Store.save('health', h);
+    var m = Progression.getSessionModel();
+    eq(m.readiness, 'red'); ok(m.reduced, 'reduced');
+  });
+
+  /* ---------- automatic backup (fake Filesystem plugin) ---------- */
+  function fakeNative() {
+    var files = {};
+    window.Capacitor = {
+      isNativePlatform: function() { return true; },
+      Plugins: { Filesystem: {
+        writeFile: function(o) { files[o.directory + '/' + o.path] = o.data; return Promise.resolve({}); },
+        readFile: function(o) { var k = o.directory + '/' + o.path; return k in files ? Promise.resolve({ data: files[k] }) : Promise.reject(new Error('nf')); },
+        deleteFile: function(o) { delete files[o.directory + '/' + o.path]; return Promise.resolve(); },
+        readdir: function(o) {
+          var pre = o.directory + '/' + o.path + '/';
+          return Promise.resolve({ files: Object.keys(files).filter(function(k) { return k.indexOf(pre) === 0; }).map(function(k) { return { name: k.slice(pre.length) }; }) });
+        }
+      } }
+    };
+    return files;
+  }
+  ta('auto backup writes a daily file, prunes to 7, restores', function() {
+    reset(); var files = fakeNative();
+    Store.save('foo', { a: 1 });
+    var d = HistoryStore.localDate();
+    for (var i = 1; i <= 9; i++) files['DOCUMENTS/AthleticCoach/backup-2026-01-0' + i + '.json'] = '{}';
+    files['DOCUMENTS/AthleticCoach/notes.txt'] = 'keep me';
+    return AutoBackup.run('test', true).then(function(wrote) {
+      ok(wrote, 'wrote');
+      ok(('DOCUMENTS/AthleticCoach/backup-' + d + '.json') in files, 'today file');
+      var names = Object.keys(files).filter(function(k) { return /backup-\d{4}-\d{2}-\d{2}\.json$/.test(k); });
+      eq(names.length, 7, 'pruned to 7');
+      ok('DOCUMENTS/AthleticCoach/notes.txt' in files, 'foreign files untouched');
+      eq(Store.get('backupmeta').date, d);
+      return AutoBackup.run('again', false);
+    }).then(function(again) {
+      eq(again, false, 'not repeated the same day');
+      Store.rawRemove('ac_foo');
+      return AutoBackup.restore('backup-' + d + '.json', 'DOCUMENTS');
+    }).then(function(res) {
+      ok(res.ok, 'restore ok'); eq(Store.get('foo'), { a: 1 });
+      return AutoBackup.restore('../evil.json', 'DOCUMENTS');
+    }).then(function(bad) {
+      eq(bad.ok, false, 'path traversal rejected');
+    }).then(function() { delete window.Capacitor; }, function(e) { delete window.Capacitor; throw e; });
+  });
+  ta('auto backup falls back to private storage and reports failures', function() {
+    reset(); var files = fakeNative();
+    var P = window.Capacitor.Plugins.Filesystem, orig = P.writeFile;
+    P.writeFile = function(o) { return o.directory === 'DOCUMENTS' ? Promise.reject(new Error('denied')) : orig(o); };
+    return AutoBackup.run('t', true).then(function(ok1) {
+      ok(ok1, 'fallback worked'); eq(Store.get('backupmeta').where, 'DATA');
+      P.writeFile = function() { return Promise.reject(new Error('disk full')); };
+      return AutoBackup.run('t', true);
+    }).then(function(ok2) {
+      eq(ok2, false); ok(Store.get('backupmeta').error.indexOf('disk full') !== -1, 'error recorded');
+    }).then(function() { delete window.Capacitor; }, function(e) { delete window.Capacitor; throw e; });
+  });
+  t('store write hook fires', function() {
+    var seen = [];
+    Store.onWrite = function(k) { seen.push(k); };
+    Store.save('hook', 1);
+    Store.onWrite = null;
+    ok(seen.indexOf('ac_hook') !== -1, 'hook');
+  });
+
   /* ---------- navigation ---------- */
   t('every page belongs to exactly one section', function() {
     PAGES.forEach(function(p) {
@@ -420,8 +573,13 @@
     }
   });
 
-  reset();
-  var summary = (fails ? 'FAILED: ' + fails : 'ALL PASSED') + ' (' + results.filter(function(r) { return r.indexOf('PASS') === 0; }).length + ' passed)';
-  document.getElementById('out').textContent = summary + '\n\n' + results.join('\n');
-  document.title = fails ? 'FAIL' : 'PASS';
+  /* async tests run one after another, after every sync test (shared storage) */
+  var chain = Promise.resolve();
+  asyncTests.forEach(function(a) { chain = chain.then(function() { return a.fn(); }).then(function() { results.push("PASS  " + a.name); }, function(e) { fails++; results.push("FAIL  " + a.name + "  ::  " + (e && e.message ? e.message : e)); }); });
+  chain.then(function() {
+    reset();
+    var summary = (fails ? 'FAILED: ' + fails : 'ALL PASSED') + ' (' + results.filter(function(r) { return r.indexOf('PASS') === 0; }).length + ' passed)';
+    document.getElementById('out').textContent = summary + '\n\n' + results.join('\n');
+    document.title = fails ? 'FAIL' : 'PASS';
+  });
 })();

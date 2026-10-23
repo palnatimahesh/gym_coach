@@ -11,7 +11,7 @@ var STATIC_ASSETS = [
   './css/style.css', './css/components.css',
   './data/exercises.js', './data/programs.js', './data/warmups.js', './data/running.js',
   './data/recovery.js', './data/history.js', './data/progression.js', './data/readiness.js',
-  './js/version.js', './js/sound.js', './js/app.js', './js/rings.js', './js/dashboard.js', './js/program.js', './js/setlog.js',
+  './js/version.js', './js/sound.js', './js/native.js', './js/health.js', './js/autobackup.js', './js/app.js', './js/rings.js', './js/dashboard.js', './js/program.js', './js/setlog.js',
   './js/workout.js', './js/dictionary.js', './js/warmup.js', './js/running.js', './js/recovery.js',
   './js/history.js', './js/charts.js', './js/progress.js', './js/nutrition.js', './js/tools.js', './js/settings.js',
   './icons/icon-192.png', './icons/icon-512.png'

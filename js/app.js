@@ -157,6 +157,7 @@ var Store = {
   },
   rawSet: function(k, v) {
     Store._mem[k] = v;
+    if (Store.onWrite) Store.onWrite(k);
     try { localStorage.setItem(k, v); return true; }
     catch(e) {
       if (!Store._warned) {
@@ -549,7 +550,7 @@ function triggerInstall() {
 }
 
 /* --- SERVICE WORKER --- */
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && !Native.isNative()) {
   window.addEventListener('load', function() {
     var hadController = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.register('./sw.js').catch(function() {});
@@ -574,6 +575,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   navigate('dashboard');
   setupNavigation();
+  Native.init();
 
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {

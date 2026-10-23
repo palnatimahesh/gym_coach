@@ -123,8 +123,11 @@ function renderSettings() {
       '<div id="settings-break-result" style="margin-top:10px"></div>' +
     '</div>' +
 
+    renderHealthCard() +
+
     '<div class="section-header"><h3>Data Backup</h3></div>' +
     '<div class="card mb-16">' +
+      renderAutoBackupBlock() +
       '<p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px">Export saves everything (plan position, workouts, PRs, body log, settings) as one JSON file. On phones it opens the share sheet - save it to Files or Drive. Import restores from a previous export.</p>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">' +
         '<button class="btn btn-secondary" onclick="exportData()">' + icon('award', 14) + ' Export</button>' +
@@ -138,7 +141,109 @@ function renderSettings() {
       '</div>' +
     '</div>' +
 
-    '<div style="text-align:center;padding:20px 0;color:var(--text-muted);font-size:0.78rem">Athletic Coach PWA v1.0</div>';
+    '<div style="text-align:center;padding:20px 0;color:var(--text-muted);font-size:0.78rem">Athletic Coach</div>';
+  populateBackupList();
+}
+
+/* ---- Health Connect ---- */
+function fmtTime(ts) {
+  if (!ts) return 'never';
+  var d = new Date(ts);
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderHealthCard() {
+  var body;
+  if (!Native.isNative()) {
+    body = '<p style="font-size:0.83rem;color:var(--text-muted)">Health sync works in the Android app. WHOOP, your watch and your phone share sleep, HRV, resting heart rate and steps through Health Connect, and the app reads them automatically.</p>';
+  } else if (!Health.connected()) {
+    body = '<p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px">Read sleep, HRV, resting heart rate and steps from Health Connect (WHOOP syncs into it). Your readiness is then calculated automatically, with no daily check-in needed.</p>' +
+      '<button class="btn btn-primary btn-full" onclick="healthConnect(this)">Connect Health</button>';
+  } else {
+    var t = Health.today() || {};
+    function stat(label, v) { return '<div style="text-align:center"><div style="font-size:1rem;font-weight:700">' + esc(v) + '</div><div style="font-size:0.7rem;color:var(--text-muted)">' + label + '</div></div>'; }
+    body = '<div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px">Connected. Last sync: ' + esc(fmtTime(Store.get('healthSyncAt', 0))) + '. Syncs on every app open.</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">' +
+        stat('Sleep h', t.sleepH !== undefined ? t.sleepH : '--') + stat('HRV ms', t.hrv !== undefined ? t.hrv : '--') +
+        stat('RHR bpm', t.rhr !== undefined ? t.rhr : '--') + stat('Steps', t.steps !== undefined ? t.steps : '--') +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+        '<button class="btn btn-secondary btn-sm" onclick="healthSyncNow(this)">Sync now</button>' +
+        '<button class="btn btn-secondary btn-sm" onclick="Health.openSettings()">Manage access</button>' +
+      '</div>' +
+      '<button class="link-btn" onclick="healthDisconnect()">Disconnect</button>';
+  }
+  return '<div class="section-header"><h3>Health Connect</h3></div><div class="card mb-16">' + body + '</div>';
+}
+
+function healthConnect(btn) {
+  if (btn) btn.disabled = true;
+  Health.connect().then(function(summary) {
+    var days = summary ? Object.keys(summary).length : 0;
+    showToast(days ? 'Connected. ' + days + ' days of data read.' : 'Connected, but no data yet. Check WHOOP syncs to Health Connect.', days ? 'success' : 'warning');
+    renderSettings();
+  }).catch(function(e) {
+    showToast((e && e.message) || 'Could not connect.', 'error');
+    renderSettings();
+  });
+}
+
+function healthSyncNow(btn) {
+  if (btn) btn.disabled = true;
+  Health.sync(true).then(function() { showToast('Synced', 'success'); renderSettings(); });
+}
+
+function healthDisconnect() {
+  Health.disconnect();
+  renderSettings();
+}
+
+/* ---- Automatic backup ---- */
+function renderAutoBackupBlock() {
+  if (!AutoBackup.enabled()) {
+    return '<p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px">Automatic nightly backup runs in the Android app. In the browser, use Export below.</p>';
+  }
+  var m = AutoBackup.meta();
+  var status = m.error
+    ? '<span style="color:var(--red)">Last attempt failed: ' + esc(m.error) + '</span>'
+    : 'Last backup: ' + esc(fmtTime(m.ts)) + (m.where === 'DOCUMENTS' ? ' (Documents/AthleticCoach)' : (m.where ? ' (app storage)' : ''));
+  return '<div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">' +
+    '<div style="font-size:0.85rem;font-weight:600;margin-bottom:4px">Automatic backup</div>' +
+    '<p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px">A fresh file is saved every day (last 7 kept), whenever the app goes to the background after changes, and Android also backs the app up to your Google account.</p>' +
+    '<div style="font-size:0.8rem;margin-bottom:8px">' + status + '</div>' +
+    '<button class="btn btn-secondary btn-sm btn-full" onclick="autoBackupNow(this)">Back up now</button>' +
+    '<div id="auto-backup-list" style="margin-top:8px"></div>' +
+  '</div>';
+}
+
+function autoBackupNow(btn) {
+  if (btn) btn.disabled = true;
+  AutoBackup.run('manual', true).then(function(ok) {
+    showToast(ok ? 'Backup saved' : 'Backup failed. Use Export instead.', ok ? 'success' : 'error');
+    renderSettings();
+  });
+}
+
+function populateBackupList() {
+  var host = el('auto-backup-list');
+  if (!host || !AutoBackup.enabled()) return;
+  AutoBackup.list().then(function(files) {
+    if (!files.length) { host.innerHTML = ''; return; }
+    var opts = files.map(function(f) { return '<option value="' + esc(f.name) + '|' + esc(f.where) + '">' + esc(f.name.replace('backup-', '').replace('.json', '')) + '</option>'; }).join('');
+    host.innerHTML = '<div style="display:flex;gap:8px"><select id="auto-backup-pick" style="flex:1">' + opts + '</select>' +
+      '<button class="btn btn-ghost btn-sm" onclick="autoBackupRestore()">Restore</button></div>';
+  });
+}
+
+function autoBackupRestore() {
+  var sel = el('auto-backup-pick');
+  if (!sel || !confirm('Replace current data with this backup?')) return;
+  var parts = sel.value.split('|');
+  AutoBackup.restore(parts[0], parts[1]).then(function(res) {
+    if (!res.ok) { showToast(res.msg || 'Restore failed', 'error'); return; }
+    showToast('Restored ' + res.count + ' data sets', 'success');
+    renderSettings();
+  });
 }
 
 function updatePhase(val) {

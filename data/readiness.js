@@ -47,8 +47,6 @@ var Readiness = (function() {
     var keys = Object.keys(all).sort();
     while (keys.length > 60) delete all[keys.shift()];
     Store.save('checkins', all);
-    /* The training plan adapts to the zone (Progression owns the sets/load scaling) */
-    Store.save('readiness', { date: today(), level: zoneOf(score) });
     return { score: score, zone: zoneOf(score) };
   }
 
@@ -59,12 +57,60 @@ var Readiness = (function() {
     Store.save('readiness', null);
   }
 
-  /* { score, zone, label, color, source } or null */
+  /* ---- Wearable-derived readiness (Health Connect data in Store 'health') ---- */
+  function clamp100(n) { return Math.max(0, Math.min(100, Math.round(n))); }
+  function sleepScore(h) { return h < 5 ? 15 : (h < 6 ? 40 : (h < 7 ? 65 : (h < 8 ? 85 : 100))); }
+
+  function dateMinus(dateStr, days) {
+    var p = dateStr.split('-');
+    return HistoryStore.localDate(new Date(+p[0], +p[1] - 1, +p[2] - days));
+  }
+
+  /* mean / sd of a field over the 28 days before dateStr (needs >= 5 days) */
+  function baseline(H, dateStr, field) {
+    var from = dateMinus(dateStr, 28), vals = [];
+    Object.keys(H).forEach(function(k) {
+      if (k >= from && k < dateStr && typeof H[k][field] === 'number') vals.push(H[k][field]);
+    });
+    if (vals.length < 5) return null;
+    var mean = vals.reduce(function(a, b) { return a + b; }, 0) / vals.length;
+    var sd = Math.sqrt(vals.reduce(function(a, b) { return a + (b - mean) * (b - mean); }, 0) / vals.length);
+    return { mean: mean, sd: sd };
+  }
+
+  /* Sleep 40 / HRV 40 / resting HR 20, renormalised over what is available. Needs last night's sleep. */
+  function fromHealth(dateStr) {
+    var H = Store.get('health', {});
+    var d = H[dateStr];
+    if (!d || typeof d.sleepH !== 'number') return null;
+    var parts = { sleep: sleepScore(d.sleepH) };
+    var weights = { sleep: 40 };
+    if (typeof d.hrv === 'number') {
+      var bh = baseline(H, dateStr, 'hrv');
+      if (bh) { parts.hrv = clamp100(50 + 25 * (d.hrv - bh.mean) / Math.max(bh.sd, 0.1 * bh.mean)); weights.hrv = 40; }
+    }
+    if (typeof d.rhr === 'number') {
+      var br = baseline(H, dateStr, 'rhr');
+      if (br) { parts.rhr = clamp100(50 - 25 * (d.rhr - br.mean) / Math.max(br.sd, 2)); weights.rhr = 20; }
+    }
+    var num = 0, den = 0;
+    Object.keys(parts).forEach(function(k) { num += parts[k] * weights[k]; den += weights[k]; });
+    return { score: Math.round(num / den), parts: parts };
+  }
+
+  /* { score, zone, label, color, source: 'health'|'checkin'|'blend', health, checkin } or null.
+     With both sources, objective data leads (70%) and how you feel adjusts it (30%). */
   function getToday() {
+    var hl = fromHealth(today());
     var c = getCheckins()[today()];
-    if (!c || typeof c.score !== 'number') return null;
-    var z = zoneOf(c.score);
-    return { score: c.score, zone: z, label: ZONES[z].label, color: ZONES[z].color, source: 'checkin' };
+    var cs = (c && typeof c.score === 'number') ? c.score : null;
+    if (!hl && cs === null) return null;
+    var score, source;
+    if (hl && cs !== null) { score = Math.round((7 * hl.score + 3 * cs) / 10); source = 'blend'; }
+    else if (hl) { score = hl.score; source = 'health'; }
+    else { score = cs; source = 'checkin'; }
+    var z = zoneOf(score);
+    return { score: score, zone: z, label: ZONES[z].label, color: ZONES[z].color, source: source, health: hl, checkin: cs };
   }
 
   /* ---- EFFORT (0-21) ---- */
@@ -132,6 +178,7 @@ var Readiness = (function() {
     saveCheckin: saveCheckin,
     clearToday: clearToday,
     getToday: getToday,
+    fromHealth: fromHealth,
     dayEffort: dayEffort,
     targetEffort: targetEffort,
     consistency: consistency,

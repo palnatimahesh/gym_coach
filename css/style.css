@@ -48,7 +48,9 @@
   --mono: 'JetBrains Mono', 'Fira Code', monospace;
 
   --nav-height: 64px;
-  --bottom-nav: 72px;
+  --safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --bottom-nav: calc(72px + var(--safe-bottom));
   --transition: 0.2s ease;
 }
 
@@ -62,6 +64,7 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   padding-bottom: var(--bottom-nav);
+  padding-top: var(--safe-top);
 }
 
 /*  TYPOGRAPHY  */
@@ -822,7 +825,7 @@ input[type='range']::-webkit-slider-thumb { -webkit-appearance:none; width:18px;
 input[type='range']::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:var(--accent); cursor:pointer; border:none; }
 
 /*  SECTION SUB-TABS  */
-.subtabs { position: sticky; top: 0; z-index: 90; display: flex; gap: 4px; max-width: 480px; margin: 0 auto; padding: 10px 16px 6px; background: linear-gradient(var(--bg-primary) 75%, transparent); }
+.subtabs { position: sticky; top: var(--safe-top); z-index: 90; display: flex; gap: 4px; max-width: 480px; margin: 0 auto; padding: 10px 16px 6px; background: linear-gradient(var(--bg-primary) 75%, transparent); }
 .subtab { flex: 1; padding: 8px 4px; border: none; border-radius: var(--radius-sm); background: var(--bg-card); color: var(--text-muted); font-family: var(--font); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: var(--transition); }
 .subtab.active { background: var(--accent-dim); color: var(--accent); }
 
@@ -842,3 +845,6 @@ input[type='range']::-moz-range-thumb { width:18px; height:18px; border-radius:5
 .checkin-q { margin-bottom: 10px; }
 .checkin-label { font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
 .chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+/*  SAFE AREAS (edge-to-edge Android)  */
+body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: var(--safe-top); background: var(--bg-primary); z-index: 200; pointer-events: none; }
+.bottom-nav { padding-bottom: var(--safe-bottom); }

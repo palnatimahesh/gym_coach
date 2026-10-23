@@ -183,8 +183,11 @@ var Progression = (function() {
   }
 
   function getReadiness() {
+    /* Manual override (the Ready/Tired/Wrecked buttons) wins; otherwise today's readiness zone */
     var r = Store.get('readiness', null);
-    return (r && r.date === today() && READINESS[r.level]) ? r.level : 'green';
+    if (r && r.date === today() && READINESS[r.level]) return r.level;
+    var rd = (typeof Readiness !== 'undefined') ? Readiness.getToday() : null;
+    return rd ? rd.zone : 'green';
   }
 
   function setReadiness(level) {
