@@ -1,0 +1,327 @@
+/* --- GUIDED WARMUP COMPONENTS --- */
+
+/* Full-screen guided overlay */
+.guided-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-primary);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.guided-overlay.hidden { display: none; }
+
+/* Header bar */
+.guided-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.guided-header .routine-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-muted);
+}
+
+.guided-header .step-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+/* Progress track */
+.guided-progress {
+  height: 3px;
+  background: var(--bg-input);
+  flex-shrink: 0;
+}
+
+.guided-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #ff6b35);
+  transition: width 0.4s ease;
+}
+
+/* Main step display */
+.guided-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  overflow-y: auto;
+}
+
+/* Timer ring - large */
+.guided-ring {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 24px;
+  flex-shrink: 0;
+}
+
+.guided-ring svg {
+  transform: rotate(-90deg);
+  width: 200px;
+  height: 200px;
+}
+
+.guided-ring .ring-bg {
+  fill: none;
+  stroke: var(--bg-card);
+  stroke-width: 10;
+}
+
+.guided-ring .ring-track {
+  fill: none;
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s linear, stroke 0.3s;
+}
+
+.guided-ring .ring-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.guided-ring .ring-time {
+  font-size: 2.8rem;
+  font-weight: 800;
+  font-family: var(--mono);
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.guided-ring .ring-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+/* Step name */
+.guided-step-name {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.guided-step-duration {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.guided-step-notes {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.6;
+  max-width: 300px;
+  margin: 0 auto 20px;
+}
+
+/* Up next pill */
+.guided-next {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.guided-next strong { color: var(--text-primary); }
+
+/* Breathing animation */
+.breathing-orb {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99,102,241,0.6), rgba(99,102,241,0.1));
+  box-shadow: 0 0 30px rgba(99,102,241,0.3);
+  margin: 0 auto 16px;
+  transition: transform 4s ease-in-out, box-shadow 4s ease-in-out;
+}
+
+.breathing-orb.expand {
+  transform: scale(1.6);
+  box-shadow: 0 0 60px rgba(99,102,241,0.5);
+}
+
+.breathing-orb.contract {
+  transform: scale(1);
+  box-shadow: 0 0 20px rgba(99,102,241,0.2);
+}
+
+.breathing-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #6366f1;
+  text-align: center;
+  margin-bottom: 6px;
+  min-height: 24px;
+}
+
+/* Step dots navigation */
+.step-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  padding: 0 20px;
+}
+
+.step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.step-dot.done     { background: var(--green); border-color: var(--green); }
+.step-dot.current  { background: var(--accent); border-color: var(--accent); width: 20px; border-radius: 100px; }
+
+/* Footer controls */
+.guided-footer {
+  padding: 16px 20px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: 56px 1fr 56px;
+  gap: 10px;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg-primary);
+}
+
+.guided-footer .btn-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.guided-footer .btn-circle:hover { background: var(--bg-card-hover); }
+.guided-footer .btn-main {
+  border-radius: var(--radius-xl);
+  height: 52px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* Step list in card */
+.warmup-step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.warmup-step-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: flex-start;
+}
+
+.warmup-step-item:last-child { border-bottom: none; }
+
+.step-num-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Sound toggle removed - timer beeps are automatic */
+
+/* Water tracker widget */
+.water-widget {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.water-drops {
+  display: flex;
+  gap: 3px;
+}
+
+.water-drop {
+  width: 10px;
+  height: 13px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: var(--blue);
+  opacity: 0.3;
+  transition: opacity 0.3s;
+}
+
+.water-drop.filled { opacity: 1; }
+
+/* Progress chart */
+.chart-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Overload prompt banner */
+.overload-prompt {
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.25);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.overload-prompt svg { color: var(--green); flex-shrink: 0; }
+.overload-prompt p { font-size: 0.82rem; color: var(--green); margin: 0; font-weight: 600; }

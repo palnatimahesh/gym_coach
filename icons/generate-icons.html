@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Athletic Coach — Icon Generator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0f; color: #f0f0f8; font-family: -apple-system, sans-serif; padding: 24px; }
+  h2 { font-size: 1.3rem; margin-bottom: 6px; }
+  p  { color: #9898b0; font-size: 0.88rem; margin-bottom: 20px; line-height: 1.5; }
+  .grid { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 32px; }
+  .icon-box { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  canvas { border-radius: 20%; box-shadow: 0 8px 32px rgba(232,67,147,0.3); }
+  .size-label { font-size: 0.78rem; color: #9898b0; }
+  button {
+    padding: 10px 20px; background: #e84393; color: white;
+    border: none; border-radius: 10px; cursor: pointer;
+    font-size: 0.88rem; font-weight: 600; transition: 0.2s;
+  }
+  button:hover { background: #d63280; }
+  .status { margin-top: 20px; padding: 14px; background: #16161f; border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 12px; font-size: 0.87rem; color: #10b981; line-height: 1.7; }
+  .step { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; }
+  .step-num { background: #e84393; color: white; border-radius: 50%; width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+  .download-all { margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<h2>Athletic Coach — PWA Icon Generator</h2>
+<p>This generates all 4 required PNG icons for PWABuilder compatibility.<br>
+Click "Download All Icons" — then move the 4 PNG files into the <code style="color:#e84393">gym-coach/icons/</code> folder.</p>
+
+<div class="grid">
+  <div class="icon-box">
+    <canvas id="c192" width="192" height="192"></canvas>
+    <div class="size-label">192×192 (any)</div>
+    <button onclick="dl('c192','icon-192.png')">Download icon-192.png</button>
+  </div>
+  <div class="icon-box">
+    <canvas id="c512" width="512" height="512"></canvas>
+    <div class="size-label">512×512 (any)</div>
+    <button onclick="dl('c512','icon-512.png')">Download icon-512.png</button>
+  </div>
+  <div class="icon-box">
+    <canvas id="m192" width="192" height="192"></canvas>
+    <div class="size-label">192×192 (maskable)</div>
+    <button onclick="dl('m192','icon-192-maskable.png')">Download icon-192-maskable.png</button>
+  </div>
+  <div class="icon-box">
+    <canvas id="m512" width="512" height="512"></canvas>
+    <div class="size-label">512×512 (maskable)</div>
+    <button onclick="dl('m512','icon-512-maskable.png')">Download icon-512-maskable.png</button>
+  </div>
+</div>
+
+<button class="download-all" onclick="dlAll()" style="font-size:1rem;padding:14px 28px">
+  Download All 4 Icons at Once
+</button>
+
+<div class="status">
+  <div style="font-weight:700;margin-bottom:10px;color:#f0f0f8">After downloading:</div>
+  <div class="step"><div class="step-num">1</div><div>Move all 4 PNG files into <code style="color:#e84393">gym-coach/icons/</code> folder</div></div>
+  <div class="step"><div class="step-num">2</div><div>Upload the <code style="color:#e84393">gym-coach/</code> folder to Netlify Drop (netlify.com/drop)</div></div>
+  <div class="step"><div class="step-num">3</div><div>Paste the Netlify URL into pwabuilder.com — all checks should pass green</div></div>
+  <div class="step"><div class="step-num">4</div><div>Click "Package for Android" → download APK</div></div>
+</div>
+
+<script>
+/* ── Draw icon on a canvas ───────────────────────────────────────────────── */
+function drawIcon(canvas, maskable) {
+  const s   = canvas.width;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, s, s);
+
+  // For maskable icons fill full square (no rounding) — safe zone is inner 80%
+  if (maskable) {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, s, s);
+  } else {
+    // Rounded rect
+    const r = s * 0.18;
+    ctx.beginPath();
+    ctx.moveTo(r, 0); ctx.lineTo(s-r, 0);
+    ctx.arcTo(s, 0, s, r, r);
+    ctx.lineTo(s, s-r);
+    ctx.arcTo(s, s, s-r, s, r);
+    ctx.lineTo(r, s);
+    ctx.arcTo(0, s, 0, s-r, r);
+    ctx.lineTo(0, r);
+    ctx.arcTo(0, 0, r, 0, r);
+    ctx.closePath();
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fill();
+  }
+
+  // Gradient background glow
+  const glow = ctx.createRadialGradient(s*0.5, s*0.42, 0, s*0.5, s*0.42, s*0.52);
+  glow.addColorStop(0, 'rgba(232,67,147,0.22)');
+  glow.addColorStop(0.6, 'rgba(232,67,147,0.06)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  if (maskable) { ctx.fillRect(0,0,s,s); } else { ctx.fill(); }
+
+  // ── Dumbbell ─────────────────────────────────────────────────────────────
+  // Scale all values to canvas size
+  // For maskable: shift content into safe zone (inner 80% = 10% padding each side)
+  const pad  = maskable ? s * 0.10 : 0;
+  const draw = s - pad * 2;         // drawable area
+  const cx   = pad + draw * 0.5;
+  const cy   = pad + draw * 0.43;
+
+  // Bar
+  const barLen   = draw * 0.52;
+  const lw       = Math.max(3, draw * 0.038);
+  const plateW   = lw * 1.1;
+
+  ctx.lineCap = 'round';
+
+  // Center bar
+  ctx.strokeStyle = '#c8c8e0';
+  ctx.lineWidth   = lw;
+  ctx.beginPath();
+  ctx.moveTo(cx - barLen * 0.52, cy);
+  ctx.lineTo(cx + barLen * 0.52, cy);
+  ctx.stroke();
+
+  // Left grip (pink)
+  ctx.strokeStyle = '#e84393';
+  ctx.lineWidth   = lw * 1.6;
+  ctx.beginPath();
+  ctx.moveTo(cx - barLen * 0.52, cy - draw * 0.07);
+  ctx.lineTo(cx - barLen * 0.52, cy + draw * 0.07);
+  ctx.stroke();
+
+  // Right grip (pink)
+  ctx.beginPath();
+  ctx.moveTo(cx + barLen * 0.52, cy - draw * 0.07);
+  ctx.lineTo(cx + barLen * 0.52, cy + draw * 0.07);
+  ctx.stroke();
+
+  // Left inner plate
+  ctx.strokeStyle = '#b0b0cc';
+  ctx.lineWidth   = plateW;
+  ctx.beginPath();
+  ctx.moveTo(cx - barLen * 0.68, cy - draw * 0.11);
+  ctx.lineTo(cx - barLen * 0.68, cy + draw * 0.11);
+  ctx.stroke();
+
+  // Left outer plate
+  ctx.lineWidth = plateW * 1.25;
+  ctx.beginPath();
+  ctx.moveTo(cx - barLen * 0.84, cy - draw * 0.155);
+  ctx.lineTo(cx - barLen * 0.84, cy + draw * 0.155);
+  ctx.stroke();
+
+  // Right inner plate
+  ctx.lineWidth = plateW;
+  ctx.beginPath();
+  ctx.moveTo(cx + barLen * 0.68, cy - draw * 0.11);
+  ctx.lineTo(cx + barLen * 0.68, cy + draw * 0.11);
+  ctx.stroke();
+
+  // Right outer plate
+  ctx.lineWidth = plateW * 1.25;
+  ctx.beginPath();
+  ctx.moveTo(cx + barLen * 0.84, cy - draw * 0.155);
+  ctx.lineTo(cx + barLen * 0.84, cy + draw * 0.155);
+  ctx.stroke();
+
+  // ── Text ─────────────────────────────────────────────────────────────────
+  const fs1 = draw * 0.115;
+  const fs2 = draw * 0.075;
+
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'alphabetic';
+
+  // "ATHLETIC"
+  ctx.fillStyle = '#e84393';
+  ctx.font      = `900 ${fs1}px Arial Black, Impact, sans-serif`;
+  ctx.fillText('ATHLETIC', cx, cy + draw * 0.265);
+
+  // "COACH"
+  ctx.fillStyle = 'rgba(232,67,147,0.55)';
+  ctx.font      = `700 ${fs2}px Arial, sans-serif`;
+  ctx.fillText('C O A C H', cx, cy + draw * 0.37);
+}
+
+/* ── Download helper ─────────────────────────────────────────────────────── */
+function dl(id, filename) {
+  const a = document.createElement('a');
+  a.download = filename;
+  a.href = document.getElementById(id).toDataURL('image/png');
+  a.click();
+}
+
+function dlAll() {
+  setTimeout(() => dl('c192',  'icon-192.png'),          0);
+  setTimeout(() => dl('c512',  'icon-512.png'),          400);
+  setTimeout(() => dl('m192',  'icon-192-maskable.png'), 800);
+  setTimeout(() => dl('m512',  'icon-512-maskable.png'), 1200);
+}
+
+/* ── Init ────────────────────────────────────────────────────────────────── */
+drawIcon(document.getElementById('c192'), false);
+drawIcon(document.getElementById('c512'), false);
+drawIcon(document.getElementById('m192'), true);
+drawIcon(document.getElementById('m512'), true);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Athletic Coach</title>
+  <meta name="description" content="Personal athletic coach for lean physique, testosterone optimization, knee-safe running, dopamine reset and phase-based training.">
+  <meta name="application-name" content="Athletic Coach">
+  <meta name="theme-color" content="#e84393">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Athletic Coach">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+
+  <!-- PAGES -->
+  <div class="page active" id="page-dashboard"><div class="container" id="dashboard-content"></div></div>
+  <div class="page" id="page-workout"><div class="container" id="workout-content"></div></div>
+  <div class="page" id="page-warmup"><div class="container" id="warmup-content"></div></div>
+  <div class="page" id="page-running"><div class="container" id="running-content"></div></div>
+  <div class="page" id="page-program"><div class="container" id="program-content"></div></div>
+  <div class="page" id="page-progress"><div class="container" id="progress-content"></div></div>
+  <div class="page" id="page-nutrition"><div class="container" id="nutrition-content"></div></div>
+  <div class="page" id="page-recovery"><div class="container" id="recovery-content"></div></div>
+  <div class="page" id="page-settings"><div class="container" id="settings-content"></div></div>
+  <div class="page" id="page-dictionary"><div class="container" id="dictionary-content"></div></div>
+  <div class="page" id="page-history"><div class="container" id="history-content"></div></div>
+  <div class="page" id="page-tools"><div class="container" id="tools-content"></div></div>
+
+  <!-- BOTTOM NAV - 5 items -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-nav="dashboard">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </button>
+    <button class="nav-item" data-nav="workout">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M3 8h6M15 8h6M3 16h6M15 16h6"/></svg>
+      Train
+    </button>
+    <button class="nav-item" data-nav="warmup">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 007-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 007 7z"/></svg>
+      Warmup
+    </button>
+    <button class="nav-item" data-nav="progress">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Progress
+    </button>
+    <button class="nav-item" id="more-btn" onclick="toggleMoreDrawer()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      More
+    </button>
+  </nav>
+
+  <!-- MORE DRAWER -->
+  <div id="more-overlay" onclick="closeMoreDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:150;backdrop-filter:blur(2px)"></div>
+  <div id="more-drawer" style="display:none;position:fixed;bottom:72px;left:0;right:0;background:var(--bg-card);border-top:1px solid var(--border);border-radius:var(--radius-xl) var(--radius-xl) 0 0;z-index:160;padding:12px 16px 24px">
+    <div style="width:36px;height:4px;background:var(--border-hover);border-radius:100px;margin:0 auto 16px"></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+      <!-- row 1 -->
+      <button class="more-item" onclick="navigateMore('running')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="5" r="1"/><path d="M4 17l5-9 3 2 3-4 4 6"/><path d="M8 20l3-5 2 2 3-5"/></svg>
+        Run
+      </button>
+      <button class="more-item" onclick="navigateMore('program')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        Program
+      </button>
+      <button class="more-item" onclick="navigateMore('nutrition')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        Nutrition
+      </button>
+      <button class="more-item" onclick="navigateMore('recovery')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+        Recovery
+      </button>
+      <!-- row 2 -->
+      <button class="more-item" onclick="navigateMore('dictionary')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        Library
+      </button>
+      <button class="more-item" onclick="navigateMore('history')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        History
+      </button>
+      <button class="more-item" onclick="navigateMore('tools')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+        Tools
+      </button>
+      <button class="more-item" onclick="navigateMore('settings')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </button>
+    </div>
+  </div>
+
+  <!-- GUIDED WARMUP OVERLAY -->
+  <div class="guided-overlay hidden" id="guided-overlay"></div>
+
+  <!-- SWAP MODAL -->
+  <div class="modal-overlay" id="swap-modal" onclick="if(event.target===this)closeSwapModal()">
+    <div id="swap-modal-content" class="modal-sheet"></div>
+  </div>
+
+  <!-- DATA -->
+  <script src="data/exercises.js"></script>
+  <script src="data/programs.js"></script>
+  <script src="data/warmups.js"></script>
+  <script src="data/running.js"></script>
+  <script src="data/recovery.js"></script>
+  <script src="data/history.js"></script>
+  <script src="data/progression.js"></script>
+
+  <!-- APP -->
+  <script src="js/sound.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/program.js"></script>
+  <script src="js/setlog.js"></script>
+  <script src="js/workout.js"></script>
+  <script src="js/dictionary.js"></script>
+  <script src="js/warmup.js"></script>
+  <script src="js/running.js"></script>
+  <script src="js/recovery.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/progress.js"></script>
+  <script src="js/nutrition.js"></script>
+  <script src="js/tools.js"></script>
+  <script src="js/settings.js"></script>
+
+</body>
+</html>
