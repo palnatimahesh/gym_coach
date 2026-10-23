@@ -19,6 +19,15 @@
           if (expect === 1 && document.getElementById('subtabs').style.display !== 'none') errs.push('subtabs visible on ' + p);
         });
         if (document.querySelectorAll('.nav-item').length !== 5) errs.push('tab count');
+        navigate('nutrition');
+        NUTRITION_TABS.forEach(function(tb) {
+          setNutritionTab(tb[0]);
+          var nc = document.getElementById('nutrition-content');
+          if (nc.innerHTML.indexOf('Something went wrong') !== -1 || nc.innerHTML.length < 500) errs.push('nutrition tab ' + tb[0] + ' failed');
+        });
+        setNutritionTab('today');
+        document.getElementById('food-name').value = 'Smoke meal'; document.getElementById('food-kcal').value = '500'; foodAdd();
+        if (FoodLog.totals().kcal !== 500) errs.push('food add failed');
         navigate('dashboard');
         var dash = document.getElementById('dashboard-content');
         if (dash.querySelectorAll('.ring-arc').length !== 3) errs.push('expected 3 rings, got ' + dash.querySelectorAll('.ring-arc').length);

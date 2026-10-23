@@ -38,7 +38,7 @@ var NUTRITION_GOALS = {
 
 
 
-function renderNutrition() {
+function getNutritionTargets() {
   var settings   = STATE.settings;
   var bw         = settings.bodyWeight || 80;
   var heightCm   = settings.heightCm  || 175;
@@ -64,10 +64,24 @@ function renderNutrition() {
   // Recalculate actual total
   var actualCals = proteinCals + fatCals + (carbs * 4);
   var deficit    = tdee - actualCals;
+  return { bw: bw, heightCm: heightCm, age: age, goalKey: goalKey, goal: goal, bmr: bmr, tdee: tdee,
+           protein: protein, fat: fat, carbs: carbs, actualCals: actualCals, deficit: deficit };
+}
 
-  el('nutrition-content').innerHTML =
-    '<div class="top-header"><h2>Nutrition</h2><span class="badge ' + goal.badge + '">' + goal.label + '</span></div>' +
+var NutritionTab = 'today';
+var NUTRITION_TABS = [['today', 'Today'], ['plan', 'Plan'], ['meals', 'Meals'], ['extras', 'Extras']];
 
+function setNutritionTab(tab) {
+  NutritionTab = tab;
+  renderNutrition();
+}
+
+function renderNutrition() {
+  var T = getNutritionTargets();
+  var bw = T.bw, heightCm = T.heightCm, age = T.age, goalKey = T.goalKey, goal = T.goal, bmr = T.bmr, tdee = T.tdee;
+  var protein = T.protein, fat = T.fat, carbs = T.carbs, actualCals = T.actualCals, deficit = T.deficit;
+
+  var planHtml =
     // Stats inputs
     '<div class="card mb-12">' +
       '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">' +
@@ -117,17 +131,95 @@ function renderNutrition() {
     // Weekly targets
     renderWeeklyTargets(protein, carbs, fat, actualCals) +
 
-    // Foods
-    renderTestosteroneFoods() +
+    '';
 
-    // Meal timing
-    renderMealTiming() +
+  var views = {
+    today:  renderFoodToday(T),
+    plan:   planHtml,
+    meals:  renderTestosteroneFoods() + renderMealTiming(),
+    extras: renderSupplements() + renderHydration()
+  };
+  if (!views[NutritionTab]) NutritionTab = 'today';
 
-    // Supplements
-    renderSupplements() +
+  el('nutrition-content').innerHTML =
+    '<div class="top-header"><h2>Nutrition</h2><span class="badge ' + goal.badge + '">' + goal.label + '</span></div>' +
+    '<div class="seg" role="tablist">' + NUTRITION_TABS.map(function(t) {
+      var on = t[0] === NutritionTab;
+      return '<button class="subtab' + (on ? ' active' : '') + '" role="tab" aria-selected="' + on + '" onclick="setNutritionTab(\'' + t[0] + '\')">' + t[1] + '</button>';
+    }).join('') + '</div>' +
+    views[NutritionTab];
+}
 
-    // Hydration
-    renderHydration();
+/* ---- Today: log meals against the daily targets ---- */
+function foodBar(label, v, target, color) {
+  var pct = target ? Math.min(100, Math.round(v / target * 100)) : 0;
+  return '<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:4px">' +
+    '<span style="color:var(--text-secondary)">' + label + '</span><span style="color:var(--text-muted)">' + v + ' / ' + target + ' g</span></div>' +
+    '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%;background:' + color + '"></div></div></div>';
+}
+
+function foodField(id, label, ph, extra) {
+  return '<div class="input-group" style="margin-bottom:0"><label>' + label + '</label>' +
+    '<input type="' + (extra ? 'number' : 'text') + '" id="' + id + '" placeholder="' + ph + '"' + (extra ? ' inputmode="decimal" min="0" step="any"' : ' maxlength="40"') + '></div>';
+}
+
+function renderFoodToday(T) {
+  var tot = FoodLog.totals();
+  var over = tot.kcal > T.actualCals * 1.1;
+  var rings = '<div class="rings-row" style="grid-template-columns:1fr 1fr">' +
+    Rings.ring({ pct: T.actualCals ? tot.kcal / T.actualCals * 100 : 0, display: String(tot.kcal), label: 'Calories',
+                 sub: 'of ' + T.actualCals.toLocaleString(), color: over ? 'var(--rec-yellow)' : 'var(--accent)' }) +
+    Rings.ring({ pct: T.protein ? tot.p / T.protein * 100 : 0, display: tot.p + 'g', label: 'Protein',
+                 sub: 'of ' + T.protein + 'g', color: 'var(--rec-red)' }) +
+  '</div>' + foodBar('Carbs', tot.c, T.carbs, 'var(--yellow)') + foodBar('Fat', tot.f, T.fat, 'var(--green)');
+
+  var recent = FoodLog.recent(8);
+  var chips = recent.length ? '<div class="chip-row" style="margin-bottom:12px">' + recent.map(function(e, i) {
+    return '<button class="chip" onclick="foodQuickAdd(' + i + ')">' + esc(e.name) + ' ' + e.kcal + '</button>';
+  }).join('') + '</div>' : '';
+
+  var form = '<div class="card mb-12">' +
+    '<div style="font-size:0.85rem;font-weight:700;margin-bottom:10px">Log food</div>' + chips +
+    foodField('food-name', 'Food', 'e.g. Chicken and rice', false) +
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0">' +
+      foodField('food-kcal', 'kcal', '0', true) + foodField('food-p', 'Protein', 'g', true) +
+      foodField('food-c', 'Carbs', 'g', true) + foodField('food-f', 'Fat', 'g', true) +
+    '</div>' +
+    '<button class="btn btn-primary btn-full" onclick="foodAdd()">Add</button>' +
+    '<p style="font-size:0.72rem;color:var(--text-muted);margin-top:6px">Leave calories empty to calculate them from the macros.</p>' +
+  '</div>';
+
+  var list = FoodLog.entries();
+  var log = list.length ? '<div class="card mb-12">' + list.map(function(e) {
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">' +
+      '<div style="flex:1;min-width:0"><div style="font-size:0.88rem;font-weight:600" class="truncate">' + esc(e.name) + '</div>' +
+      '<div style="font-size:0.72rem;color:var(--text-muted)">P ' + e.p + ' / C ' + e.c + ' / F ' + e.f + '</div></div>' +
+      '<div style="font-weight:700;font-size:0.9rem">' + e.kcal + '</div>' +
+      '<button class="btn-icon" aria-label="Remove" onclick="foodRemove(' + e.id + ')" style="color:var(--text-muted);background:none;border:none;font-size:1.1rem;cursor:pointer">&times;</button>' +
+    '</div>';
+  }).join('') + '</div>' : '<p style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:8px 0 16px">Nothing logged yet today.</p>';
+
+  return '<div class="card mb-12" style="padding:16px">' + rings + '</div>' + form + log;
+}
+
+function foodAdd() {
+  function v(id) { var e = el(id); return e ? e.value : ''; }
+  var res = FoodLog.add({ name: v('food-name'), kcal: v('food-kcal'), p: v('food-p'), c: v('food-c'), f: v('food-f') });
+  if (res.error) { showToast(res.error, 'warning'); return; }
+  showToast('Added ' + res.entry.name, 'success');
+  renderNutrition();
+}
+
+function foodQuickAdd(i) {
+  var e = FoodLog.recent(8)[i];
+  if (!e) return;
+  FoodLog.add({ name: e.name, kcal: e.kcal, p: e.p, c: e.c, f: e.f });
+  renderNutrition();
+}
+
+function foodRemove(id) {
+  FoodLog.remove(id);
+  renderNutrition();
 }
 
 function numberInput(id, label, value, onchange) {

@@ -848,3 +848,5 @@ input[type='range']::-moz-range-thumb { width:18px; height:18px; border-radius:5
 /*  SAFE AREAS (edge-to-edge Android)  */
 body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: var(--safe-top); background: var(--bg-primary); z-index: 200; pointer-events: none; }
 .bottom-nav { padding-bottom: var(--safe-bottom); }
+
+.seg { display: flex; gap: 4px; margin-bottom: 12px; }

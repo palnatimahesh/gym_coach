@@ -189,12 +189,15 @@ function renderHealthCard() {
     body = '<p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px">Read sleep, HRV, resting heart rate and steps from Health Connect (WHOOP syncs into it). Your readiness is then calculated automatically, with no daily check-in needed.</p>' +
       '<button class="btn btn-primary btn-full" onclick="healthConnect(this)">Connect Health</button>';
   } else {
-    var t = Health.today() || {};
-    function stat(label, v) { return '<div style="text-align:center"><div style="font-size:1rem;font-weight:700">' + esc(v) + '</div><div style="font-size:0.7rem;color:var(--text-muted)">' + label + '</div></div>'; }
+    var L = { sleepH: Health.latest('sleepH'), hrv: Health.latest('hrv'), rhr: Health.latest('rhr'), steps: Health.latest('steps') };
+    function stat(label, e) {
+      return '<div style="text-align:center"><div style="font-size:1rem;font-weight:700">' + (e ? esc(Math.round(e.value * 10) / 10) : '--') + '</div>' +
+        '<div style="font-size:0.7rem;color:var(--text-muted)">' + label + '</div>' +
+        '<div style="font-size:0.62rem;color:var(--text-muted)">' + (e ? esc(Health.ageLabel(e.date)) : '') + '</div></div>';
+    }
     body = '<div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px">Connected. Last sync: ' + esc(fmtTime(Store.get('healthSyncAt', 0))) + '. Syncs on every app open.</div>' +
       '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">' +
-        stat('Sleep h', t.sleepH !== undefined ? t.sleepH : '--') + stat('HRV ms', t.hrv !== undefined ? t.hrv : '--') +
-        stat('RHR bpm', t.rhr !== undefined ? t.rhr : '--') + stat('Steps', t.steps !== undefined ? t.steps : '--') +
+        stat('Sleep h', L.sleepH) + stat('HRV ms', L.hrv) + stat('RHR bpm', L.rhr) + stat('Steps', L.steps) +
       '</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
         '<button class="btn btn-secondary btn-sm" onclick="healthSyncNow(this)">Sync now</button>' +

@@ -586,6 +586,61 @@
     ok(html.indexOf('Readiness') !== -1 && html.indexOf('Sleep') !== -1 && html.indexOf('Steps') !== -1, 'sections');
   });
 
+  /* ---------- food log + health display ---------- */
+  t('food validation', function() {
+    ok(FoodLog.validate({ name: '', kcal: 100 }).error, 'name required');
+    ok(FoodLog.validate({ name: 'x' }).error, 'needs numbers');
+    ok(FoodLog.validate({ name: 'x', kcal: -5 }).error, 'negative');
+    ok(FoodLog.validate({ name: 'x', kcal: 9999 }).error, 'too big');
+    ok(FoodLog.validate({ name: 'x', kcal: 'abc' }).error, 'not a number');
+    eq(FoodLog.validate({ name: 'Rice', p: 10, c: 50, f: 5 }).entry.kcal, 285, 'kcal from macros');
+    eq(FoodLog.validate({ name: 'Rice', kcal: 300 }).entry.kcal, 300);
+    eq(FoodLog.validate({ name: new Array(80).join('a'), kcal: 1 }).entry.name.length, 40, 'name capped');
+  });
+  t('food log totals, remove and recent', function() {
+    reset();
+    FoodLog.add({ name: 'Eggs', kcal: 300, p: 24, c: 2, f: 20 });
+    var added = FoodLog.add({ name: 'Rice', kcal: 400, p: 8, c: 85, f: 1 });
+    eq(FoodLog.totals(), { kcal: 700, p: 32, c: 87, f: 21 });
+    eq(FoodLog.entries().length, 2);
+    ok(FoodLog.remove(added.entry.id), 'removed'); eq(FoodLog.totals().kcal, 300);
+    eq(FoodLog.remove(12345), false);
+    FoodLog.add({ name: 'eggs', kcal: 150 });
+    eq(FoodLog.recent().length, 1, 'recent is distinct by name');
+    eq(FoodLog.recent()[0].kcal, 150, 'newest first');
+  });
+  t('food log keeps 60 days', function() {
+    reset();
+    for (var i = 0; i < 70; i++) FoodLog.add({ name: 'f', kcal: 1 }, daysAgo(i));
+    ok(Object.keys(Store.get('meals')).length <= 60, 'capped');
+  });
+  t('nutrition tabs render with logged food', function() {
+    reset(); var host = document.createElement('div'); host.id = 'nutrition-content'; document.body.appendChild(host);
+    FoodLog.add({ name: '<b>Oats</b>', kcal: 350, p: 12, c: 60, f: 6 });
+    ['today', 'plan', 'meals', 'extras'].forEach(function(tab) {
+      setNutritionTab(tab);
+      ok(host.innerHTML.length > 500, tab + ' renders');
+      eq(host.querySelectorAll('.subtab.active').length, 1, tab + ' active tab');
+    });
+    setNutritionTab('today');
+    ok(host.innerHTML.indexOf('&lt;b&gt;Oats') !== -1 && host.innerHTML.indexOf('<b>Oats') === -1, 'name escaped');
+    ok(host.querySelectorAll('.ring-arc').length === 2, 'two rings');
+    document.body.removeChild(host);
+  });
+  t('health latest falls back to the newest day that has the value', function() {
+    reset(); var h = {};
+    h[daysAgo(2)] = { hrv: 55, steps: 9000 }; h[daysAgo(1)] = { hrv: 61 }; h[HistoryStore.localDate()] = { sleepH: 7 };
+    Store.save('health', h);
+    eq(Health.latest('hrv').value, 61); eq(Health.latest('hrv').date, daysAgo(1));
+    eq(Health.latest('steps').value, 9000); eq(Health.latest('sleepH').value, 7);
+    eq(Health.latest('rhr'), null);
+    eq(Health.ageLabel(HistoryStore.localDate()), 'today'); eq(Health.ageLabel(daysAgo(1)), 'yesterday');
+  });
+  t('overnight HRV and resting HR belong to the wake-up day', function() {
+    var s = Health.summarize({ hrv: [{ startDate: at(2026, 9, 19, 23, 30), endDate: at(2026, 9, 19, 23, 30), value: 60 }], rhr: [{ startDate: at(2026, 9, 20, 14, 0), value: 50 }] });
+    eq(s['2026-10-20'].hrv, 60); eq(s['2026-10-20'].rhr, 50); eq(Object.keys(s).length, 1);
+  });
+
   /* ---------- navigation ---------- */
   t('every page belongs to exactly one section', function() {
     PAGES.forEach(function(p) {

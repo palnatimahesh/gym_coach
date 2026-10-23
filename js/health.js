@@ -77,7 +77,7 @@ var Health = (function() {
       (samples || []).forEach(function(s) {
         var v = parseFloat(s.value), when = s.endDate || s.startDate;
         if (isNaN(v) || v <= 0 || !when) return;
-        var k = dayKey(new Date(when));
+        var k = wakeKey(new Date(when));   // overnight readings belong to the day you wake up
         (acc[k] = acc[k] || []).push(v);
       });
       Object.keys(acc).forEach(function(k) {
@@ -161,8 +161,23 @@ var Health = (function() {
 
   function today() { return (Store.get('health', {}))[HistoryStore.localDate()] || null; }
 
+  /* Newest recorded value for a field: { value, date } or null (sleep/HRV land on the wake-up day, steps build up all day) */
+  function latest(field) {
+    var H = Store.get('health', {});
+    var keys = Object.keys(H).sort().reverse();
+    for (var i = 0; i < keys.length; i++) {
+      if (typeof H[keys[i]][field] === 'number') return { value: H[keys[i]][field], date: keys[i] };
+    }
+    return null;
+  }
+
+  function ageLabel(date) {
+    var d = dayDiff(date, HistoryStore.localDate());
+    return d <= 0 ? 'today' : (d === 1 ? 'yesterday' : date.slice(5));
+  }
+
   return {
     available: available, connected: connected, connect: connect, sync: sync, disconnect: disconnect,
-    openSettings: openSettings, today: today, summarize: summarize, merge: merge, unionMinutes: unionMinutes
+    openSettings: openSettings, today: today, latest: latest, ageLabel: ageLabel, summarize: summarize, merge: merge, unionMinutes: unionMinutes
   };
 })();

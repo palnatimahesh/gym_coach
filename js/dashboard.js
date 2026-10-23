@@ -152,16 +152,19 @@ function openCheckin() {
 
 /* Sleep / steps / HRV / resting HR from Health Connect, when connected and available */
 function renderHealthRow() {
-  var t = Health.today();
-  if (!t) return '';
-  var items = [];
-  if (t.sleepH !== undefined) items.push(['Sleep', t.sleepH + 'h']);
-  if (t.hrv !== undefined)    items.push(['HRV', Math.round(t.hrv) + ' ms']);
-  if (t.rhr !== undefined)    items.push(['Resting HR', Math.round(t.rhr) + ' bpm']);
-  if (t.steps !== undefined)  items.push(['Steps', t.steps.toLocaleString()]);
+  if (!Health.connected()) return '';
+  var defs = [['Sleep', 'sleepH', function(v) { return (Math.round(v * 10) / 10) + 'h'; }],
+              ['HRV', 'hrv', function(v) { return Math.round(v) + ' ms'; }],
+              ['Resting HR', 'rhr', function(v) { return Math.round(v) + ' bpm'; }],
+              ['Steps', 'steps', function(v) { return Math.round(v).toLocaleString(); }]];
+  var items = defs.map(function(d) {
+    var e = Health.latest(d[1]);
+    return e ? { label: d[0], value: d[2](e.value), age: Health.ageLabel(e.date) } : null;
+  }).filter(Boolean);
   if (!items.length) return '';
   return '<div class="stats-row mb-12">' + items.map(function(i) {
-    return '<div class="stat-tile"><div class="value" style="font-size:1.05rem">' + esc(i[1]) + '</div><div class="label">' + esc(i[0]) + '</div></div>';
+    return '<div class="stat-tile"><div class="value" style="font-size:1.05rem">' + esc(i.value) + '</div><div class="label">' + esc(i.label) + '</div>' +
+      (i.age !== 'today' ? '<div style="font-size:0.6rem;color:var(--text-muted)">' + esc(i.age) + '</div>' : '') + '</div>';
   }).join('') + '</div>';
 }
 
