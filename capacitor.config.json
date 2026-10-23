@@ -1,0 +1,12 @@
+{
+  "appId": "com.palnatimahesh.athleticcoach",
+  "appName": "Athletic Coach",
+  "webDir": "www",
+  "backgroundColor": "#0b0d10",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

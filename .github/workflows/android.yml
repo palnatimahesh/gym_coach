@@ -1,0 +1,68 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main, android-wip]
+    paths-ignore: ['tests/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      # Android only installs an APK as an UPDATE when it is signed with the same key.
+      # Keep one debug key across builds so new APKs install over the old app without losing data.
+      - name: Restore signing key
+        id: key
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: debug-keystore-v1
+
+      - name: Install Capacitor
+        run: npm install --no-audit --no-fund
+
+      - name: Stage web assets
+        run: |
+          mkdir www
+          cp -r index.html manifest.json sw.js css js data icons www/
+
+      - name: Create and sync Android project
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Save signing key
+        if: steps.key.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: debug-keystore-v1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: athletic-coach-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+          if-no-files-found: error
