@@ -172,7 +172,7 @@ function startSetTimer(key, setIdx) {
   var stage = 'ready', side = 1, total = 3, endAt = Date.now() + 3000, lastBeep = -1;
 
   function paint(rem) {
-    var color = stage === 'ready' ? '#f59e0b' : (side === 1 ? '#3b82f6' : '#e84393');
+    var color = stage === 'ready' ? '#f59e0b' : (side === 1 ? '#3b82f6' : '#00d4b4');
     var head  = stage === 'ready' ? 'Get ready' : (sides === 2 ? 'Side ' + side + ' of 2' : 'Hold');
     var pct   = Math.round(((total - rem) / total) * 100);
     overlay.innerHTML =

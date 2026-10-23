@@ -53,8 +53,8 @@ function renderRunPlan() {
 
 function renderCurrentRunWeek(week) {
   var phaseColors = {
-    walk_jog: '#10b981', continuous: '#f59e0b', tempo: '#e84393',
-    mixed: '#8b5cf6', '5k': '#ef4444', speed: '#3b82f6', athletic: '#ff6b35'
+    walk_jog: '#10b981', continuous: '#f59e0b', tempo: '#00d4b4',
+    mixed: '#8b5cf6', '5k': '#ef4444', speed: '#3b82f6', athletic: '#0093e7'
   };
   var color = phaseColors[week.phase] || '#6366f1';
 
@@ -99,8 +99,8 @@ function renderRunWeekCard(week) {
   var isCurrent   = week.week === STATE.runningWeek;
   var isCompleted = week.week < STATE.runningWeek;
   var phaseColors = {
-    walk_jog: '#10b981', continuous: '#f59e0b', tempo: '#e84393',
-    mixed: '#8b5cf6', '5k': '#ef4444', speed: '#3b82f6', athletic: '#ff6b35'
+    walk_jog: '#10b981', continuous: '#f59e0b', tempo: '#00d4b4',
+    mixed: '#8b5cf6', '5k': '#ef4444', speed: '#3b82f6', athletic: '#0093e7'
   };
   var color = phaseColors[week.phase] || '#6366f1';
 

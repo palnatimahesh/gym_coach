@@ -82,12 +82,12 @@ window.addEventListener('load', function() {
 
   if (missing.length > 0) {
     document.body.innerHTML =
-      '<div style="padding:32px 20px;text-align:center;font-family:sans-serif;background:#0a0a0f;color:#f0f0f8;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center">' +
+      '<div style="padding:32px 20px;text-align:center;font-family:sans-serif;background:#0b0d10;color:#f0f0f8;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center">' +
         '<div style="font-size:2rem;margin-bottom:16px">&#x26A0;</div>' +
         '<h2 style="margin-bottom:8px">Loading Error</h2>' +
-        '<p style="color:#9898b0;margin-bottom:8px;font-size:0.9rem">Failed to load: ' + missing.join(', ') + '</p>' +
-        '<p style="color:#9898b0;margin-bottom:24px;font-size:0.85rem">Try refreshing the page.</p>' +
-        '<button onclick="window.location.reload()" style="padding:12px 28px;background:#e84393;color:white;border:none;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer">Reload App</button>' +
+        '<p style="color:#94a3b0;margin-bottom:8px;font-size:0.9rem">Failed to load: ' + missing.join(', ') + '</p>' +
+        '<p style="color:#94a3b0;margin-bottom:24px;font-size:0.85rem">Try refreshing the page.</p>' +
+        '<button onclick="window.location.reload()" style="padding:12px 28px;background:#00d4b4;color:white;border:none;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer">Reload App</button>' +
       '</div>';
   }
 });
@@ -127,7 +127,7 @@ var CATEGORY_ICONS = {
 };
 
 var CATEGORY_COLORS = {
-  push:     { bg: 'rgba(232,67,147,0.1)',  color: '#e84393' },
+  push:     { bg: 'rgba(0,212,180,0.1)',  color: '#00d4b4' },
   pull:     { bg: 'rgba(59,130,246,0.1)',  color: '#3b82f6' },
   legs:     { bg: 'rgba(245,158,11,0.1)',  color: '#f59e0b' },
   core:     { bg: 'rgba(16,185,129,0.1)',  color: '#10b981' },
@@ -246,6 +246,33 @@ function markWorkoutDone() {
 }
 
 /* --- ROUTER --- */
+/* Bottom tabs own sections; pages inside a section get a segmented sub-tab bar. */
+var SECTIONS = {
+  home:     { pages: ['dashboard'] },
+  train:    { pages: ['workout', 'warmup', 'running', 'program'], names: { workout: 'Workout', warmup: 'Warmup', running: 'Run', program: 'Plan' } },
+  progress: { pages: ['progress', 'history'], names: { progress: 'Stats', history: 'History' } },
+  fuel:     { pages: ['nutrition', 'recovery', 'tools'], names: { nutrition: 'Nutrition', recovery: 'Recovery', tools: 'Tools' } },
+  more:     { pages: ['settings', 'dictionary'], names: { settings: 'Settings', dictionary: 'Library' } }
+};
+var SECTION_LAST = {};
+
+function sectionOf(page) {
+  for (var k in SECTIONS) if (SECTIONS[k].pages.indexOf(page) !== -1) return k;
+  return 'home';
+}
+
+function renderSubtabs(page) {
+  var host = el('subtabs');
+  if (!host) return;
+  var sec = SECTIONS[sectionOf(page)];
+  if (sec.pages.length < 2) { host.style.display = 'none'; host.innerHTML = ''; return; }
+  host.style.display = 'flex';
+  host.innerHTML = sec.pages.map(function(p) {
+    var on = p === page;
+    return '<button class="subtab' + (on ? ' active' : '') + '" role="tab" aria-selected="' + on + '" onclick="navigate(\'' + p + '\')">' + sec.names[p] + '</button>';
+  }).join('');
+}
+
 function navigate(page) {
   if (PAGES.indexOf(page) === -1) return;
 
@@ -258,8 +285,11 @@ function navigate(page) {
   var pageEl = document.getElementById('page-' + page);
   if (pageEl) { pageEl.classList.add('active'); pageEl.scrollTop = 0; }
 
-  var navEl = document.querySelector('[data-nav="' + page + '"]');
+  var section = sectionOf(page);
+  SECTION_LAST[section] = page;
+  var navEl = document.querySelector('[data-section="' + section + '"]');
   if (navEl) navEl.classList.add('active');
+  renderSubtabs(page);
 
   STATE.currentPage = page;
   renderPage(page);
@@ -287,7 +317,7 @@ function renderPage(page) {
       contentEl.innerHTML =
         '<div style="padding:24px;text-align:center">' +
           '<h3 style="margin-bottom:8px">Something went wrong</h3>' +
-          '<p style="font-size:0.87rem;color:#9898b0;margin-bottom:16px">' + esc(e.message || 'Unknown error') + '</p>' +
+          '<p style="font-size:0.87rem;color:#94a3b0;margin-bottom:16px">' + esc(e.message || 'Unknown error') + '</p>' +
           '<button class="btn btn-secondary" onclick="renderPage(\'' + page + '\')">Try Again</button>' +
         '</div>';
     }
@@ -559,34 +589,9 @@ function setupNavigation() {
     (function(btn) {
       btn.addEventListener('click', function() {
         if (typeof SoundSystem !== 'undefined') SoundSystem.unlock();
-        navigate(btn.getAttribute('data-nav'));
+        navigate(SECTION_LAST[btn.getAttribute('data-section')] || btn.getAttribute('data-nav'));
       });
     })(navItems[i]);
   }
 }
 
-/* MORE DRAWER */
-function toggleMoreDrawer() {
-  var drawer  = el('more-drawer');
-  var overlay = el('more-overlay');
-  if (!drawer) return;
-  var isOpen = drawer.style.display !== 'none';
-  drawer.style.display  = isOpen ? 'none' : 'block';
-  overlay.style.display = isOpen ? 'none' : 'block';
-  var moreBtn = el('more-btn');
-  if (moreBtn) moreBtn.classList.toggle('active', !isOpen);
-}
-
-function closeMoreDrawer() {
-  var drawer  = el('more-drawer');
-  var overlay = el('more-overlay');
-  if (drawer)  drawer.style.display  = 'none';
-  if (overlay) overlay.style.display = 'none';
-  var moreBtn = el('more-btn');
-  if (moreBtn) moreBtn.classList.remove('active');
-}
-
-function navigateMore(page) {
-  closeMoreDrawer();
-  navigate(page);
-}

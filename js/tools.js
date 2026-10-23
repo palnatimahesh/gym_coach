@@ -199,7 +199,7 @@ function calculate1RM() {
   var repMap = { 100:1, 95:2, 90:3, 85:4, 80:6, 75:8, 70:10, 60:15 };
 
   el('rm-result').innerHTML =
-    '<div style="background:rgba(232,67,147,0.08);border:1px solid var(--accent-dim);border-radius:var(--radius-md);padding:12px">' +
+    '<div style="background:rgba(0,212,180,0.08);border:1px solid var(--accent-dim);border-radius:var(--radius-md);padding:12px">' +
       '<div style="text-align:center;margin-bottom:12px">' +
         '<div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Estimated 1RM</div>' +
         '<div style="font-size:2rem;font-weight:800;color:var(--accent)">' + oneRM.toFixed(1) + 'kg</div>' +

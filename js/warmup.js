@@ -138,7 +138,7 @@ function getWarmupForDay(dayIndex) {
 }
 
 function warmupColor(id) {
-  return { upper_body:'#e84393', lower_body:'#f59e0b', full_body:'#10b981', running:'#6366f1', mobility_only:'#8b5cf6' }[id] || '#888';
+  return { upper_body:'#00d4b4', lower_body:'#f59e0b', full_body:'#10b981', running:'#6366f1', mobility_only:'#8b5cf6' }[id] || '#888';
 }
 
 /*  TODAY BANNER  */
@@ -276,7 +276,7 @@ function renderWarmupRoutines() {
 }
 
 function renderWarmupRoutineCard(routine, dayTags) {
-  var colorMap = { upper_body:'#e84393', lower_body:'#f59e0b', full_body:'#10b981', running:'#6366f1', mobility_only:'#8b5cf6' };
+  var colorMap = { upper_body:'#00d4b4', lower_body:'#f59e0b', full_body:'#10b981', running:'#6366f1', mobility_only:'#8b5cf6' };
   var iconMap  = { upper_body:'push', lower_body:'run', full_body:'flame', running:'run', mobility_only:'heart' };
   var whenMap  = { upper_body:'Before upper body / push / pull sessions', lower_body:'Before lower body / squat / deadlift sessions', full_body:'Before full body sessions', running:'Before every run or cardio session', mobility_only:'Recovery days and post-workout cooldown' };
 
@@ -738,7 +738,7 @@ function renderWarmupRoutinesFallback() {
   try {
     var routines = objValues(WARMUPS.routines);
     var html = '<div class="section-header"><h3>Warmup Routines</h3></div>';
-    var colors = { upper_body:'#e84393', lower_body:'#f59e0b', full_body:'#10b981', running:'#6366f1', mobility_only:'#8b5cf6' };
+    var colors = { upper_body:'#00d4b4', lower_body:'#f59e0b', full_body:'#10b981', running:'#6366f1', mobility_only:'#8b5cf6' };
     routines.forEach(function(r) {
       var color = colors[r.id] || '#888';
       html += '<div class="exercise-card mb-10" id="warmup-card-' + r.id + '">' +

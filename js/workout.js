@@ -774,7 +774,7 @@ function getSessionModeInfo(exercises, mode) {
 function getCategoryBg(focusLabel) {
   if (!focusLabel) return 'var(--bg-secondary)';
   var fl = focusLabel.toLowerCase();
-  if (fl.indexOf('push') !== -1 || fl.indexOf('chest') !== -1) return 'rgba(232,67,147,0.15)';
+  if (fl.indexOf('push') !== -1 || fl.indexOf('chest') !== -1) return 'rgba(0,212,180,0.15)';
   if (fl.indexOf('pull') !== -1 || fl.indexOf('back') !== -1)  return 'rgba(59,130,246,0.15)';
   if (fl.indexOf('leg')  !== -1 || fl.indexOf('lower') !== -1) return 'rgba(245,158,11,0.15)';
   if (fl.indexOf('core') !== -1)                               return 'rgba(16,185,129,0.15)';

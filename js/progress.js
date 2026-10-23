@@ -165,7 +165,7 @@ function calculateBodyFat() {
   var target = bf > 12 ? 'Target: 10-13% for lean athletic physique' : 'You are in athletic range. Maintain.';
 
   el('bf-result').innerHTML =
-    '<div style="background:rgba(' + (color === '#10b981' ? '16,185,129' : '232,67,147') + ',0.1);border:1px solid rgba(' + (color === '#10b981' ? '16,185,129' : '232,67,147') + ',0.25);border-radius:var(--radius-md);padding:14px;text-align:center">' +
+    '<div style="background:rgba(' + (color === '#10b981' ? '16,185,129' : '0,212,180') + ',0.1);border:1px solid rgba(' + (color === '#10b981' ? '16,185,129' : '0,212,180') + ',0.25);border-radius:var(--radius-md);padding:14px;text-align:center">' +
       '<div style="font-size:2.5rem;font-weight:800;color:' + color + '">' + bf.toFixed(1) + '%</div>' +
       '<div style="font-size:0.9rem;font-weight:600;color:' + color + ';margin-bottom:4px">' + category + '</div>' +
       '<div style="font-size:0.8rem;color:var(--text-muted)">' + target + '</div>' +

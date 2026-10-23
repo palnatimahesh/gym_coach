@@ -7,7 +7,7 @@ var Charts = (function() {
   /* points: [{label, value}] oldest -> newest. Returns an <svg> string. */
   function line(points, o) {
     o = o || {};
-    var color = o.color || '#e84393';
+    var color = o.color || '#00d4b4';
     var n = points.length;
     if (!n) return '';
     var vals = points.map(function(p) { return p.value; });
@@ -27,8 +27,8 @@ var Charts = (function() {
       (n > 1 ? '<polygon points="' + xy[0].x + ',100 ' + poly + ' ' + last.x + ',100" fill="' + color + '" fill-opacity="0.1"/>' : '') +
       '<polyline points="' + poly + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
       '<circle cx="' + last.x + '" cy="' + last.y + '" r="2.5" fill="' + color + '"/>' +
-      '<text x="0" y="108" font-size="5" fill="#5a5a70">' + esc(points[0].label) + '</text>' +
-      '<text x="100" y="108" font-size="5" fill="#5a5a70" text-anchor="end">' + esc(points[n - 1].label) + '</text>' +
+      '<text x="0" y="108" font-size="5" fill="#5b6772">' + esc(points[0].label) + '</text>' +
+      '<text x="100" y="108" font-size="5" fill="#5b6772" text-anchor="end">' + esc(points[n - 1].label) + '</text>' +
     '</svg>' +
     '<div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted)">' +
       '<span>' + fmt(Math.min.apply(null, vals)) + (o.unit || '') + '</span>' +
@@ -48,8 +48,8 @@ var Charts = (function() {
       var h = Math.max(it.value > 0 ? 1.5 : 0, (it.value / max) * 40);
       var x = i * slot + (slot - bw) / 2;
       return '<rect x="' + x + '" y="' + (46 - h) + '" width="' + bw + '" height="' + h + '" rx="1" fill="' + color + '" fill-opacity="' + (it.value > 0 ? 0.85 : 0.25) + '"/>' +
-        '<text x="' + (x + bw / 2) + '" y="' + (44 - h) + '" font-size="4" fill="#9898b0" text-anchor="middle">' + (it.value > 0 ? fmt(it.value) : '') + '</text>' +
-        '<text x="' + (x + bw / 2) + '" y="54" font-size="3.6" fill="#5a5a70" text-anchor="middle">' + esc(it.label) + '</text>';
+        '<text x="' + (x + bw / 2) + '" y="' + (44 - h) + '" font-size="4" fill="#94a3b0" text-anchor="middle">' + (it.value > 0 ? fmt(it.value) : '') + '</text>' +
+        '<text x="' + (x + bw / 2) + '" y="54" font-size="3.6" fill="#5b6772" text-anchor="middle">' + esc(it.label) + '</text>';
     }).join('');
     return '<svg viewBox="0 0 100 58" style="width:100%;height:110px" role="img" aria-label="' + esc(o.label || 'Bar chart') + '">' +
       '<line x1="0" y1="46" x2="100" y2="46" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>' + body + '</svg>';

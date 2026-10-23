@@ -95,7 +95,7 @@ function renderWeeklyHeatmap(sessions) {
   cells.forEach(function(c) {
     var bg = c.isFuture    ? 'var(--bg-secondary)'
            : c.isToday     ? 'var(--accent)'
-           : c.hasSession  ? 'rgba(232,67,147,0.5)'
+           : c.hasSession  ? 'rgba(0,212,180,0.5)'
            : 'var(--bg-card)';
     var border = c.isToday ? '1px solid var(--accent)' : '1px solid var(--border)';
     html += '<div style="aspect-ratio:1;border-radius:3px;background:' + bg + ';border:' + border + '" title="' + c.dateStr + '"></div>';

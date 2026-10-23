@@ -39,7 +39,7 @@ function renderSettings() {
 
     '<div class="card-accent mb-16">' +
       '<div style="display:flex;gap:14px;align-items:center">' +
-        '<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#ff6b35);display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">&#x1F3CB;</div>' +
+        '<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#0093e7);display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">&#x1F3CB;</div>' +
         '<div style="flex:1">' +
           '<h3>Athletic Physique Builder</h3>' +
           '<p style="font-size:0.83rem;margin-top:2px">Phase ' + STATE.phase + ': ' + phaseName + '</p>' +
@@ -133,7 +133,8 @@ function renderSettings() {
       '<input type="file" id="import-file-input" accept=".json,application/json,text/plain" style="display:none" onchange="importData(this)">' +
       '<div id="import-result" style="margin-top:6px"></div>' +
       '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">' +
-        '<button class="btn btn-ghost btn-full" style="color:var(--red);border-color:rgba(239,68,68,0.3)" onclick="resetAllData()">Reset All Data</button>' +
+        '<div style="text-align:center;font-size:0.72rem;color:var(--text-muted);margin:12px 0">Version ' + esc(APP_VERSION) + '</div>' +
+      '<button class="btn btn-ghost btn-full" style="color:var(--red);border-color:rgba(239,68,68,0.3)" onclick="resetAllData()">Reset All Data</button>' +
       '</div>' +
     '</div>' +
 

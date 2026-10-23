@@ -289,7 +289,7 @@ function renderTestosteroneFoods() {
     'Zinc':      'var(--yellow)',
     'Fat':       'var(--green)',
     'Omega-3':   '#6366f1',
-    'Antioxidant':'#e84393',
+    'Antioxidant':'#00d4b4',
     'Magnesium': '#3b82f6',
     'Protein':   '#10b981',
     'Recovery':  '#8b5cf6',
@@ -421,7 +421,7 @@ function renderMealTiming() {
   var tagColors = {
     pre:      { bg: 'rgba(99,102,241,0.1)',  border: 'rgba(99,102,241,0.3)',  color: '#6366f1',      label: 'Pre' },
     train:    { bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.3)',   color: 'var(--red)',   label: 'Train' },
-    post:     { bg: 'rgba(232,67,147,0.1)',  border: 'rgba(232,67,147,0.4)',  color: 'var(--accent)',label: 'Post' },
+    post:     { bg: 'rgba(0,212,180,0.1)',  border: 'rgba(0,212,180,0.4)',  color: 'var(--accent)',label: 'Post' },
     meal:     { bg: 'transparent',           border: 'var(--border)',          color: 'var(--accent)',label: '' },
     snack:    { bg: 'transparent',           border: 'var(--border)',          color: 'var(--yellow)',label: 'Snack' },
     optional: { bg: 'transparent',           border: 'var(--border)',          color: 'var(--text-muted)', label: 'Optional' }
@@ -431,7 +431,7 @@ function renderMealTiming() {
     return plan.map(function(t) {
       var tc = tagColors[t.tag] || tagColors.meal;
       return '<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);' +
-        (t.highlight ? 'background:rgba(232,67,147,0.04);margin:0 -12px;padding:10px 12px;' : '') + '">' +
+        (t.highlight ? 'background:rgba(0,212,180,0.04);margin:0 -12px;padding:10px 12px;' : '') + '">' +
         '<div style="flex-shrink:0;min-width:56px">' +
           '<div style="font-size:0.72rem;font-weight:700;color:' + tc.color + '">' + t.time + '</div>' +
           (tc.label ? '<span class="badge" style="font-size:0.6rem;background:' + tc.bg + ';color:' + tc.color + ';border:1px solid ' + tc.border + ';margin-top:3px">' + tc.label + '</span>' : '') +
@@ -466,7 +466,7 @@ function renderMealTiming() {
     '</div>' +
 
     // Protein shake note
-    '<div class="card mb-16" style="border-color:rgba(232,67,147,0.25);background:rgba(232,67,147,0.05)">' +
+    '<div class="card mb-16" style="border-color:rgba(0,212,180,0.25);background:rgba(0,212,180,0.05)">' +
       '<div class="exercise-section-title" style="color:var(--accent)">About Protein Shakes</div>' +
       '<div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;margin-bottom:10px">' +
         'A whey shake is a <strong>tool, not a requirement</strong>. Use it only when you cannot eat real food within 30 min of finishing your workout.' +

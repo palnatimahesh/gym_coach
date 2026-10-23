@@ -321,6 +321,28 @@
     eq(set.reps, '45');
   });
 
+  /* ---------- navigation ---------- */
+  t('every page belongs to exactly one section', function() {
+    PAGES.forEach(function(p) {
+      var owners = Object.keys(SECTIONS).filter(function(k) { return SECTIONS[k].pages.indexOf(p) !== -1; });
+      eq(owners.length, 1, p + ' owners');
+    });
+    Object.keys(SECTIONS).forEach(function(k) {
+      SECTIONS[k].pages.forEach(function(p) { ok(PAGES.indexOf(p) !== -1, k + ' lists unknown page ' + p); });
+      if (SECTIONS[k].pages.length > 1) SECTIONS[k].pages.forEach(function(p) { ok(SECTIONS[k].names[p], 'no label for ' + p); });
+    });
+    eq(Object.keys(SECTIONS).length, 5, 'five bottom tabs');
+  });
+  t('sub-tab bar renders per section', function() {
+    var host = document.createElement('div'); host.id = 'subtabs'; document.body.appendChild(host);
+    renderSubtabs('workout');
+    eq(host.querySelectorAll('.subtab').length, 4); ok(host.querySelector('.subtab.active').textContent === 'Workout', 'active');
+    renderSubtabs('dashboard');
+    eq(host.style.display, 'none');
+    document.body.removeChild(host);
+  });
+  t('version constant is defined', function() { ok(/^\d{4}-\d{2}-\d{2}\.\d+$/.test(APP_VERSION), APP_VERSION); });
+
   /* ---------- storage fallback (last: touches window.localStorage) ---------- */
   t('store falls back to memory when localStorage is blocked', function() {
     reset();

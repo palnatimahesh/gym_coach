@@ -45,7 +45,7 @@
 
 .guided-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), #ff6b35);
+  background: linear-gradient(90deg, var(--accent), #0093e7);
   transition: width 0.4s ease;
 }
 
