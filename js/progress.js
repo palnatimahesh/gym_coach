@@ -19,6 +19,7 @@ function renderProgress() {
     renderWeightChart(weights) +
 
     // Strength + volume
+    renderReadinessTrends() +
     renderStrengthSection() +
 
     // Measurements history

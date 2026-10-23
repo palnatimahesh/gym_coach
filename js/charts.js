@@ -58,6 +58,31 @@ var Charts = (function() {
   return { line: line, bars: bars };
 })();
 
+/* ---- Readiness / effort / sleep / steps trends (Progress page, last 14 days) ---- */
+function renderReadinessTrends() {
+  var s = Readiness.series(14);
+  var scored = s.filter(function(x) { return x.score !== null; });
+  var hasEffort = s.some(function(x) { return x.effort > 0; });
+  if (scored.length < 2 && !hasEffort) {
+    return '<div class="card mb-16" style="text-align:center;padding:20px">' +
+      '<p style="color:var(--text-muted);font-size:0.87rem">Do the morning check-in or connect Health to see readiness and effort trends.</p></div>';
+  }
+  function block(title, sub, inner) {
+    return '<div class="section-header"><h3>' + title + '</h3><span class="text-xs text-muted">' + sub + '</span></div><div class="card mb-16" style="padding:16px">' + inner + '</div>';
+  }
+  function dayBars(field, color, label, scale) {
+    return Charts.bars(s.map(function(x) { return { label: x.date.slice(8), value: x[field] === null ? 0 : Math.round(x[field] * scale * 10) / 10 }; }), { color: color, label: label });
+  }
+  var html = '';
+  if (scored.length >= 2) {
+    html += block('Readiness', '0-100', Charts.line(scored.map(function(x) { return { label: x.date.slice(5), value: x.score }; }), { color: '#19e68c', label: 'Readiness trend' }));
+  }
+  if (hasEffort) html += block('Effort', 'Last 14 days, 0-21', dayBars('effort', '#0093e7', 'Daily effort', 1));
+  if (s.some(function(x) { return x.sleepH !== null; })) html += block('Sleep', 'Hours', dayBars('sleepH', '#6366f1', 'Sleep hours', 1));
+  if (s.some(function(x) { return x.steps !== null; })) html += block('Steps', 'Thousands', dayBars('steps', '#00d4b4', 'Daily steps in thousands', 0.001));
+  return html;
+}
+
 /* ---- Strength + volume section (Progress page) ---- */
 var ChartState = { exId: null };
 

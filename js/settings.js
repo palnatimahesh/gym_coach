@@ -123,6 +123,7 @@ function renderSettings() {
       '<div id="settings-break-result" style="margin-top:10px"></div>' +
     '</div>' +
 
+    renderRemindersCard() +
     renderHealthCard() +
 
     '<div class="section-header"><h3>Data Backup</h3></div>' +
@@ -143,6 +144,34 @@ function renderSettings() {
 
     '<div style="text-align:center;padding:20px 0;color:var(--text-muted);font-size:0.78rem">Athletic Coach</div>';
   populateBackupList();
+}
+
+/* ---- Reminders (Android app) ---- */
+function renderRemindersCard() {
+  if (!Native.isNative()) return '';
+  var r = Notify.get();
+  function toggle(on, call) {
+    return '<label class="toggle-switch"><input type="checkbox"' + (on ? ' checked' : '') + ' onchange="' + call + '"><span class="toggle-thumb"></span></label>';
+  }
+  function row(label, control) {
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0"><div style="font-size:0.88rem">' + label + '</div>' + control + '</div>';
+  }
+  return '<div class="section-header"><h3>Reminders</h3></div><div class="card mb-16">' +
+    row('Training reminder', toggle(r.train.on, 'setReminder(\'train\',\'on\',this.checked)')) +
+    (r.train.on ? row('Time', '<input type="time" value="' + esc(r.train.time) + '" onchange="setReminder(\'train\',\'time\',this.value)" style="width:auto">') : '') +
+    row('Water reminders (10:00 - 20:00)', toggle(r.water.on, 'setReminder(\'water\',\'on\',this.checked)')) +
+    '<p style="font-size:0.75rem;color:var(--text-muted);margin-top:6px">Reminders are scheduled by Android, so they arrive even when the app is closed.</p>' +
+  '</div>';
+}
+
+function setReminder(kind, field, value) {
+  Notify.set(kind, field, value).then(function() {
+    showToast('Reminders updated', 'success');
+    renderSettings();
+  }).catch(function(e) {
+    showToast((e && e.message) || 'Could not schedule reminders', 'warning');
+    if (field === 'on') Notify.set(kind, 'on', false).catch(function() {}).then(renderSettings);
+  });
 }
 
 /* ---- Health Connect ---- */

@@ -87,8 +87,68 @@ var Native = (function() {
       if (document.visibilityState === 'visible' && typeof activeWorkout !== 'undefined' && activeWorkout.startTime) keepAwake(true);
     });
     AutoBackup.init();
+    Notify.apply(false).catch(function() {});
     Health.sync().then(function(res) { if (res) refreshVisible(); });
+    /* Keep wearable data fresh while the app stays open */
+    setInterval(function() { Health.sync().then(function(res) { if (res) refreshVisible(); }); }, 30 * 60 * 1000);
   }
 
   return { isNative: isNative, plugin: plugin, init: init, keepAwake: keepAwake, haptic: haptic, refreshVisible: refreshVisible };
+})();
+
+/* --- LOCAL REMINDERS (Android): scheduled by the OS, so they fire with the app closed --- */
+var Notify = (function() {
+
+  var WATER_HOURS = [10, 12, 14, 16, 18, 20];
+
+  function get() {
+    var r = Store.get('reminders', null) || {};
+    return {
+      train: { on: !!(r.train && r.train.on), time: (r.train && r.train.time) || '17:30' },
+      water: { on: !!(r.water && r.water.on) }
+    };
+  }
+
+  /* Pure: reminder settings -> notification list for the plugin */
+  function plan(rem) {
+    var list = [];
+    if (rem.train.on) {
+      var m = /^(\d{1,2}):(\d{2})$/.exec(rem.train.time);
+      var h = m ? parseInt(m[1], 10) : -1, min = m ? parseInt(m[2], 10) : -1;
+      if (h >= 0 && h < 24 && min >= 0 && min < 60) {
+        list.push({ id: 1, title: 'Time to train', body: 'Your session is ready. Open Athletic Coach.', schedule: { on: { hour: h, minute: min }, allowWhileIdle: true } });
+      }
+    }
+    if (rem.water.on) {
+      WATER_HOURS.forEach(function(hr, i) {
+        list.push({ id: 10 + i, title: 'Drink water', body: 'Keep your hydration on track today.', schedule: { on: { hour: hr, minute: 0 }, allowWhileIdle: true } });
+      });
+    }
+    return list;
+  }
+
+  /* Replace everything scheduled with the current settings. askPermission: show the Android prompt if needed. */
+  function apply(askPermission) {
+    var P = Native.plugin('LocalNotifications');
+    if (!P) return Promise.resolve(false);
+    var list = plan(get());
+    var perm = list.length && askPermission ? P.requestPermissions() : P.checkPermissions();
+    return perm.then(function(r) {
+      if (list.length && r.display !== 'granted') throw new Error('Notifications are blocked. Allow them in Android settings.');
+      return P.getPending();
+    }).then(function(p) {
+      return p.notifications && p.notifications.length ? P.cancel({ notifications: p.notifications }) : null;
+    }).then(function() {
+      return list.length ? P.schedule({ notifications: list }) : null;
+    }).then(function() { return true; });
+  }
+
+  function set(kind, field, value) {
+    var r = get();
+    r[kind][field] = value;
+    Store.save('reminders', r);
+    return apply(true);
+  }
+
+  return { get: get, plan: plan, apply: apply, set: set };
 })();

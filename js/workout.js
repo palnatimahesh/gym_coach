@@ -487,6 +487,7 @@ function startCustomSession() {
 }
 
 function initActiveWorkout(exercises, title, model) {
+  Native.keepAwake(true);
   var indexed = exercises.map(function(e, i) {
     return Object.assign({}, e, { _key: e.id + '_' + i });
   });
@@ -551,6 +552,7 @@ function completeSet(key, setIdx) {
   if (row) row.outerHTML = renderSetRow(key, setIdx, set);
   if (set.done) {
     SoundSystem.tick();
+    Native.haptic('light');
     var sx = findSessionExercise(key);
     var finalSet = sx && sx === activeWorkout.exercises[activeWorkout.exercises.length - 1] && setIdx === activeWorkout.sets[key].length - 1;
     var rs = sx ? getRestSeconds(sx) : 0;
@@ -566,9 +568,10 @@ function startRestTimer(seconds) {
   container.classList.remove('hidden');
   var circ  = 2 * Math.PI * 62;
   var total = seconds;
+  var endAt = Date.now() + seconds * 1000;   // wall-clock based: correct even if the phone throttles timers
 
   function tick() {
-    activeWorkout.restRemaining--;
+    activeWorkout.restRemaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
     var disp   = el('rest-display');
     var circle = el('timer-circle');
     if (disp)   disp.textContent = formatTime(Math.max(0, activeWorkout.restRemaining));
@@ -577,6 +580,7 @@ function startRestTimer(seconds) {
       clearInterval(activeWorkout.restTimer);
       if (container) container.classList.add('hidden');
       SoundSystem.restDone();
+      Native.haptic('success');
       var nextMsg = 'Rest done -- next set!';
       if (activeWorkout.exercises && activeWorkout.currentExIdx < activeWorkout.exercises.length - 1) {
         var nx = EXERCISES[activeWorkout.exercises[activeWorkout.currentExIdx + 1].id];
@@ -629,10 +633,10 @@ function mergeLoggedExercises() {
   return order.map(function(id) { return byId[id]; });
 }
 
-function completeWorkout() {
-  cancelSetTimer();
-  clearInterval(activeWorkout.elapsedInterval);
-  clearInterval(activeWorkout.restTimer);
+var lastSessionId = null;
+
+/* Build and save the session log from the active workout */
+function logSession() {
   var duration = activeWorkout.startTime ? Math.floor((Date.now() - activeWorkout.startTime) / 1000) : 0;
   var allSets  = [];
   Object.keys(activeWorkout.sets).forEach(function(k) { allSets = allSets.concat(activeWorkout.sets[k]); });
@@ -643,15 +647,29 @@ function completeWorkout() {
     phase: STATE.phase, duration: duration, doneSets: doneCount, totalSets: allSets.length,
     exercises: mergeLoggedExercises(),
     reduced: !!(activeWorkout.model && activeWorkout.model.reduced),
-    week: STATE.weekInPhase
+    week: STATE.weekInPhase,
+    rpe: activeWorkout.rpe || {}
   };
+  HistoryStore.saveSession(sessionLog);
+  lastSessionId = sessionLog.id;
+  return { id: sessionLog.id, duration: duration, doneCount: doneCount, totalSets: allSets.length };
+}
 
-  var noteEl = document.getElementById('session-note-input');
-  if (noteEl) sessionLog.note = noteEl.value || '';
-  sessionLog.rpe = activeWorkout.rpe || {};
-  if (typeof HistoryStore !== 'undefined') HistoryStore.saveSession(sessionLog);
+/* The note box only exists after the session is saved, so it updates the saved entry */
+function saveSessionNote(text) {
+  if (lastSessionId) HistoryStore.updateSessionNote(lastSessionId, text);
+}
+
+function completeWorkout() {
+  cancelSetTimer();
+  Native.keepAwake(false);
+  clearInterval(activeWorkout.elapsedInterval);
+  clearInterval(activeWorkout.restTimer);
+  var res = logSession();
+  var duration = res.duration, doneCount = res.doneCount;
   markWorkoutDone();
   SoundSystem.fanfare();
+  Native.haptic('success');
 
   el('workout-content').innerHTML =
     '<div style="text-align:center;padding:40px 20px">' +
@@ -665,7 +683,7 @@ function completeWorkout() {
       '</div>' +
       '<div style="margin-bottom:14px">' +
       '<label style="font-size:0.82rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px">Session note</label>' +
-      '<input type="text" id="session-note-input" placeholder="How did it feel? Any pain? PRs hit?" ' +
+      '<input type="text" id="session-note-input" placeholder="How did it feel? Any pain? PRs hit?" maxlength="300" onchange="saveSessionNote(this.value)" ' +
         'style="width:100%;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-md);padding:8px 12px;color:var(--text-primary);font-size:0.9rem;font-family:var(--font);outline:none">' +
     '</div>' +
     '<div class="coach-tip" style="text-align:left;margin-bottom:20px">' +
@@ -683,9 +701,18 @@ function completeWorkout() {
 }
 
 function endWorkout() {
-  if (!confirm('End session? Progress saved.')) return;
+  if (!confirm('End session? Completed sets are saved.')) return;
+  cancelSetTimer();
+  Native.keepAwake(false);
   clearInterval(activeWorkout.elapsedInterval);
   clearInterval(activeWorkout.restTimer);
+  var res = activeWorkout.exercises.length ? logSession() : null;
+  if (res && res.doneCount > 0) {
+    if (res.doneCount * 2 >= res.totalSets) markWorkoutDone();
+    showToast('Saved ' + res.doneCount + ' completed sets', 'success');
+  } else if (res) {
+    HistoryStore.deleteSession(res.id);
+  }
   activeWorkout = { exercises: [], currentExIdx: 0, sets: {}, title: '', startTime: null, restTimer: null, restRemaining: 0, paused: false, elapsedInterval: null, swappedExercises: {}, frozenElapsed: undefined };
   renderWorkout();
 }

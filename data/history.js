@@ -133,6 +133,20 @@ var HistoryStore = (function() {
       return save(KEYS.sessions, sessions);
     },
 
+    updateSessionNote: function(id, note) {
+      var all = load(KEYS.sessions, []);
+      for (var i = 0; i < all.length; i++) {
+        if (all[i].id === id) { all[i].note = String(note || '').slice(0, 300); return save(KEYS.sessions, all); }
+      }
+      return false;
+    },
+
+    deleteSession: function(id) {
+      var all = load(KEYS.sessions, []);
+      var next = all.filter(function(s) { return s.id !== id; });
+      return next.length === all.length ? false : save(KEYS.sessions, next);
+    },
+
     /* skipReduced: ignore deload / low-readiness sessions (their loads are not a baseline) */
     getLastSession: function(exerciseId, skipReduced) {
       var sessions = load(KEYS.sessions, []);

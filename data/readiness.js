@@ -100,9 +100,9 @@ var Readiness = (function() {
 
   /* { score, zone, label, color, source: 'health'|'checkin'|'blend', health, checkin } or null.
      With both sources, objective data leads (70%) and how you feel adjusts it (30%). */
-  function getToday() {
-    var hl = fromHealth(today());
-    var c = getCheckins()[today()];
+  function scoreOn(dateStr) {
+    var hl = fromHealth(dateStr);
+    var c = getCheckins()[dateStr];
     var cs = (c && typeof c.score === 'number') ? c.score : null;
     if (!hl && cs === null) return null;
     var score, source;
@@ -111,6 +111,20 @@ var Readiness = (function() {
     else { score = cs; source = 'checkin'; }
     var z = zoneOf(score);
     return { score: score, zone: z, label: ZONES[z].label, color: ZONES[z].color, source: source, health: hl, checkin: cs };
+  }
+
+  function getToday() { return scoreOn(today()); }
+
+  /* Last n days (oldest first): { date, score|null, effort, sleepH|null, steps|null } */
+  function series(n) {
+    var out = [], H = Store.get('health', {}), now = new Date();
+    for (var i = n - 1; i >= 0; i--) {
+      var d = HistoryStore.localDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i));
+      var r = scoreOn(d), h = H[d] || {};
+      out.push({ date: d, score: r ? r.score : null, effort: dayEffort(d),
+                 sleepH: typeof h.sleepH === 'number' ? h.sleepH : null, steps: typeof h.steps === 'number' ? h.steps : null });
+    }
+    return out;
   }
 
   /* ---- EFFORT (0-21) ---- */
@@ -178,6 +192,8 @@ var Readiness = (function() {
     saveCheckin: saveCheckin,
     clearToday: clearToday,
     getToday: getToday,
+    scoreOn: scoreOn,
+    series: series,
     fromHealth: fromHealth,
     dayEffort: dayEffort,
     targetEffort: targetEffort,

@@ -534,6 +534,58 @@
     ok(seen.indexOf('ac_hook') !== -1, 'hook');
   });
 
+  /* ---------- reminders, session saving, trends ---------- */
+  t('reminder plan', function() {
+    eq(Notify.plan({ train: { on: false, time: '17:30' }, water: { on: false } }), []);
+    var p = Notify.plan({ train: { on: true, time: '07:05' }, water: { on: false } });
+    eq(p.length, 1); eq(p[0].schedule.on, { hour: 7, minute: 5 });
+    eq(Notify.plan({ train: { on: true, time: '25:00' }, water: { on: false } }), [], 'invalid hour');
+    eq(Notify.plan({ train: { on: true, time: 'abc' }, water: { on: false } }), [], 'garbage');
+    var both = Notify.plan({ train: { on: true, time: '18:00' }, water: { on: true } });
+    eq(both.length, 7);
+    var ids = both.map(function(n) { return n.id; });
+    eq(ids.length, ids.filter(function(v, i) { return ids.indexOf(v) === i; }).length, 'unique ids');
+  });
+  t('reminders default off and persist', function() {
+    reset();
+    eq(Notify.get().train.on, false);
+    Store.save('reminders', { train: { on: true, time: '06:30' }, water: { on: true } });
+    eq(Notify.get().train.time, '06:30'); eq(Notify.get().water.on, true);
+  });
+  t('logSession saves partial work, note can be added later, empty can be deleted', function() {
+    reset();
+    activeWorkout = {
+      startTime: Date.now() - 90000, title: 'Test', model: { reduced: false }, rpe: {},
+      exercises: [{ id: 'squat', _key: 'squat_0', reps: '8' }],
+      sets: { squat_0: [{ weight: '100', reps: '8', done: true }, { weight: '100', reps: '8', done: false }] }
+    };
+    var res = logSession();
+    eq(res.doneCount, 1); eq(res.totalSets, 2); ok(res.duration >= 89, 'duration');
+    var saved = HistoryStore.getSessions()[0];
+    eq(saved.doneSets, 1); eq(saved.title, 'Test');
+    saveSessionNote('felt good');
+    eq(HistoryStore.getSessions()[0].note, 'felt good');
+    eq(HistoryStore.updateSessionNote(-1, 'x'), false);
+    ok(HistoryStore.deleteSession(res.id), 'deleted'); eq(HistoryStore.getSessions().length, 0);
+    eq(HistoryStore.deleteSession(res.id), false);
+  });
+  t('readiness series covers n days oldest first', function() {
+    reset(); var d = HistoryStore.localDate();
+    var h = {}; h[d] = { sleepH: 7.5, steps: 5000 }; Store.save('health', h);
+    var s = Readiness.series(14);
+    eq(s.length, 14); eq(s[13].date, d); ok(s[0].date < s[13].date, 'order');
+    eq(s[13].score, 85); eq(s[13].sleepH, 7.5); eq(s[13].steps, 5000); eq(s[0].score, null);
+  });
+  t('trend section renders for empty and populated data', function() {
+    reset();
+    ok(renderReadinessTrends().indexOf('check-in') !== -1, 'empty hint');
+    var d = HistoryStore.localDate(), h = {};
+    h[d] = { sleepH: 7, steps: 4000 }; h[daysAgo(1)] = { sleepH: 6.5, steps: 8000 };
+    Store.save('health', h);
+    var html = renderReadinessTrends();
+    ok(html.indexOf('Readiness') !== -1 && html.indexOf('Sleep') !== -1 && html.indexOf('Steps') !== -1, 'sections');
+  });
+
   /* ---------- navigation ---------- */
   t('every page belongs to exactly one section', function() {
     PAGES.forEach(function(p) {
