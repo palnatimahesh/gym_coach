@@ -25,7 +25,9 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: android-actions/setup-android@v3
+      # Runners ship with the Android SDK; just accept licences so Gradle can fetch the platform it needs.
+      - name: Accept Android licences
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
       # Android only installs an APK as an UPDATE when it is signed with the same key.
       # Keep one debug key across builds so new APKs install over the old app without losing data.
