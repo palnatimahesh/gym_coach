@@ -424,10 +424,10 @@
     var s = Health.summarize({
       sleep: [{ startDate: at(2026, 9, 19, 23, 0), endDate: at(2026, 9, 20, 7, 0), sleepState: 'light' }],
       hrv: [{ endDate: at(2026, 9, 20, 2, 0), value: 70 }, { endDate: at(2026, 9, 20, 4, 0), value: 80 }, { endDate: at(2026, 9, 20, 10, 0), value: 40 }],
-      rhr: [{ startDate: at(2026, 9, 20, 5, 0), value: 48 }, { startDate: at(2026, 9, 20, 13, 0), value: 55 }]
+      rhr: [{ startDate: at(2026, 9, 20, 5, 0), value: 48 }, { startDate: at(2026, 9, 20, 6, 0), value: 51 }, { startDate: at(2026, 9, 20, 13, 0), value: 55 }]
     });
     eq(s['2026-10-20'].hrv, 75, 'average of the readings inside the sleep window only');
-    eq(s['2026-10-20'].rhr, 55, 'latest resting HR reading');
+    eq(s['2026-10-20'].rhr, 48, 'lowest resting HR during sleep, not a daytime reading');
     eq(s['2026-10-20'].sleepH, 8);
   });
   t('summarize tolerates junk', function() {
@@ -921,6 +921,50 @@
     var s = Player.buildSteps();
     eq(s.length, 5);
     eq(s.map(function(x) { return x.exIdx + ':' + x.setIdx; }), ['0:0', '0:1', '0:2', '1:0', '1:1']);
+  });
+
+  /* ---------- Drive folder backup ---------- */
+  t('device-specific keys never travel in a backup', function() {
+    reset(); Store.save('backupfolder', { uri: 'content://x', name: 'D' }); Store.save('backupmeta', { date: 'x' }); Store.save('foo', 1);
+    var b = buildBackup();
+    ok(b.keys.ac_foo, 'normal data included'); ok(!b.keys.ac_backupfolder && !b.keys.ac_backupmeta, 'folder grant and meta excluded');
+    var r = restoreBackup(JSON.stringify({ keys: { ac_foo: '2', ac_backupfolder: '{"uri":"content://evil"}' } }));
+    ok(r.ok, 'ok'); eq(r.count, 1); eq(Store.get('backupfolder').uri, 'content://x', 'a backup cannot overwrite this phone folder grant');
+  });
+  ta('drive folder backup: copy, prune, list, restore, failure handling', function() {
+    reset(); var files = fakeNative(), folder = {}, failWrite = false, d = HistoryStore.localDate();
+    window.Capacitor.Plugins.FolderBackup = {
+      pickFolder: function() { return Promise.resolve({ uri: 'content://tree/drive', name: 'Drive Backups' }); },
+      writeFile: function(o) { if (failWrite) return Promise.reject(new Error('Folder access was lost')); folder[o.name] = o.data; return Promise.resolve(); },
+      listFiles: function() { return Promise.resolve({ files: Object.keys(folder).map(function(n) { return { name: n, modified: 1 }; }) }); },
+      readFile: function(o) { return o.name in folder ? Promise.resolve({ data: folder[o.name] }) : Promise.reject(new Error('nf')); },
+      deleteFile: function(o) { delete folder[o.name]; return Promise.resolve(); }
+    };
+    Store.save('foo', { a: 1 });
+    for (var i = 1; i <= 9; i++) folder['backup-2026-01-0' + i + '.json'] = '{}';
+    function cleanup() { delete window.Capacitor; }
+    return AutoBackup.chooseFolder().then(function(r) {
+      eq(r.name, 'Drive Backups'); eq(Store.get('backupfolder').uri, 'content://tree/drive');
+      ok(('backup-' + d + '.json') in folder, 'copied to the folder'); eq(Object.keys(folder).length, 7, 'folder pruned to 7');
+      ok(Store.get('backupfolderstatus').ts, 'status recorded');
+      return AutoBackup.list();
+    }).then(function(list) {
+      ok(list.some(function(x) { return x.where === 'FOLDER' && x.name === 'backup-' + d + '.json'; }), 'listed from the folder');
+      Store.rawRemove('ac_foo');
+      return AutoBackup.restore('backup-' + d + '.json', 'FOLDER');
+    }).then(function(res) {
+      ok(res.ok, 'restored from the folder'); eq(Store.get('foo'), { a: 1 });
+      eq(Store.get('backupfolder').name, 'Drive Backups', 'folder choice survives a restore');
+      failWrite = true;
+      return AutoBackup.run('t', true);
+    }).then(function(wrote) {
+      ok(wrote, 'the local copy still succeeds'); ok(Store.get('backupfolderstatus').error.indexOf('lost') !== -1, 'folder failure recorded');
+      failWrite = false; AutoBackup.clearFolder();
+      eq(AutoBackup.folder(), null);
+      return AutoBackup.restore('backup-' + d + '.json', 'FOLDER');
+    }).then(function(res) {
+      eq(res.ok, false, 'no folder configured');
+    }).then(cleanup, function(e) { cleanup(); throw e; });
   });
 
   /* ---------- navigation ---------- */

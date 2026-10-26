@@ -92,10 +92,15 @@ var Health = (function() {
     }
     function mean(list) { return list.reduce(function(a, b) { return a + b.v; }, 0) / list.length; }
 
-    /* Resting heart rate: the latest reading */
+    /* Resting heart rate: the lowest reading during last night's sleep (the usual definition); without sleep
+       data, the latest reading of the day */
     var rhr = byDay(raw.rhr);
     Object.keys(rhr).forEach(function(k) {
-      slot(k).rhr = round1(rhr[k].sort(function(a, b) { return b.t - a.t; })[0].v);
+      var w = windows[k];
+      var inSleep = w ? rhr[k].filter(function(x) { return x.t >= w[0] && x.t <= w[1]; }) : [];
+      slot(k).rhr = inSleep.length
+        ? round1(Math.min.apply(null, inSleep.map(function(x) { return x.v; })))
+        : round1(rhr[k].sort(function(a, b) { return b.t - a.t; })[0].v);
     });
     /* HRV: average over last night's sleep window (daytime readings are lower and not comparable) */
     var hrv = byDay(raw.hrv);

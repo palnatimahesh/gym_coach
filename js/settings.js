@@ -256,8 +256,43 @@ function renderAutoBackupBlock() {
     '<p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px">A fresh file is saved every day (last 7 kept), whenever the app goes to the background after changes, and Android also backs the app up to your Google account.</p>' +
     '<div style="font-size:0.8rem;margin-bottom:8px">' + status + '</div>' +
     '<button class="btn btn-secondary btn-sm btn-full" onclick="autoBackupNow(this)">Back up now</button>' +
+    renderFolderBlock() +
     '<div id="auto-backup-list" style="margin-top:8px"></div>' +
   '</div>';
+}
+
+/* Copy of every backup in a folder the user picked once, e.g. inside Google Drive */
+function renderFolderBlock() {
+  if (!AutoBackup.folderSupported()) return '';
+  var cfg = AutoBackup.folder(), st = AutoBackup.folderStatus();
+  var line = !cfg ? 'No cloud folder chosen.'
+    : 'Folder: <b>' + esc(cfg.name) + '</b>' + (st.error ? '<br><span style="color:var(--red)">Last copy failed: ' + esc(st.error) + '</span>'
+        : (st.ts ? ' - last copy ' + esc(fmtTime(st.ts)) : ' - waiting for the first copy'));
+  return '<div style="margin-top:10px"><div style="font-size:0.8rem;margin-bottom:6px">' + line + '</div>' +
+    (cfg
+      ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn btn-secondary btn-sm" onclick="chooseBackupFolder(this)">Change folder</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="clearBackupFolder()">Stop copying</button></div>'
+      : '<button class="btn btn-primary btn-sm btn-full" onclick="chooseBackupFolder(this)">Choose Google Drive folder</button>' +
+        '<p style="font-size:0.72rem;color:var(--text-muted);margin-top:6px">In the picker, open the menu, choose Drive, then pick or create a folder. Every backup is copied there too.</p>') +
+  '</div>';
+}
+
+function chooseBackupFolder(btn) {
+  if (btn) btn.disabled = true;
+  AutoBackup.chooseFolder().then(function(r) {
+    showToast('Backups will be copied to ' + r.name, 'success');
+    renderSettings();
+  }).catch(function(e) {
+    var msg = (e && e.message) || 'Could not choose a folder';
+    if (!/cancel/i.test(msg)) showToast(msg, 'warning');
+    renderSettings();
+  });
+}
+
+function clearBackupFolder() {
+  if (!confirm('Stop copying backups to that folder? Files already there stay.')) return;
+  AutoBackup.clearFolder();
+  renderSettings();
 }
 
 function autoBackupNow(btn) {
@@ -273,7 +308,10 @@ function populateBackupList() {
   if (!host || !AutoBackup.enabled()) return;
   AutoBackup.list().then(function(files) {
     if (!files.length) { host.innerHTML = ''; return; }
-    var opts = files.map(function(f) { return '<option value="' + esc(f.name) + '|' + esc(f.where) + '">' + esc(f.name.replace('backup-', '').replace('.json', '')) + '</option>'; }).join('');
+    var opts = files.map(function(f) {
+      var label = f.name.replace('backup-', '').replace('.json', '') + (f.where === 'FOLDER' ? ' (Drive folder)' : '');
+      return '<option value="' + esc(f.name) + '|' + esc(f.where) + '">' + esc(label) + '</option>';
+    }).join('');
     host.innerHTML = '<div style="display:flex;gap:8px"><select id="auto-backup-pick" style="flex:1">' + opts + '</select>' +
       '<button class="btn btn-ghost btn-sm" onclick="autoBackupRestore()">Restore</button></div>';
   });
@@ -347,9 +385,12 @@ function assessBreakSettings() {
 }
 
 /* ---- BACKUP: all ac_* keys, mobile-safe (share sheet -> download -> copy text) ---- */
+/* Device-specific bookkeeping (folder access grants, last backup times) must not travel to another phone */
+var DEVICE_KEYS = /^ac_(backupfolder|backupfolderstatus|backupmeta)$/;
+
 function buildBackup() {
   var keys = {};
-  Store.keys().forEach(function(k) { var v = Store.rawGet(k); if (v !== null) keys[k] = v; });
+  Store.keys().forEach(function(k) { var v = Store.rawGet(k); if (v !== null && !DEVICE_KEYS.test(k)) keys[k] = v; });
   return { app: 'athletic-coach', version: Store.SCHEMA, exportDate: new Date().toISOString(), keys: keys };
 }
 
@@ -430,7 +471,7 @@ function restoreBackup(text) {
 
   if (data && data.keys && typeof data.keys === 'object') {
     Object.keys(data.keys).forEach(function(k) {
-      if (/^ac_[a-z0-9_]+$/i.test(k) && typeof data.keys[k] === 'string') incoming[k] = data.keys[k];
+      if (/^ac_[a-z0-9_]+$/i.test(k) && !DEVICE_KEYS.test(k) && typeof data.keys[k] === 'string') incoming[k] = data.keys[k];
     });
   } else if (data && (typeof data.phase !== 'undefined' || typeof data.streak !== 'undefined')) {
     /* Legacy (v1) export */

@@ -4,6 +4,7 @@
 - versionCode = CI run number, versionName = APP_VERSION: lets each build install as an update.
 Fails loudly if an expected pattern is missing so a Capacitor template change is noticed.
 """
+import json
 import os
 import pathlib
 import re
@@ -38,6 +39,30 @@ def configure_signing(app_gradle):
     sub_required(app_gradle, r"(buildTypes\s*\{\s*release\s*\{)", lambda m: m.group(1) + "\n            signingConfig signingConfigs.release", "release build type")
 
 
+def install_folder_backup_plugin():
+    """Copy the Storage Access Framework backup plugin into the app and register it in MainActivity."""
+    app_id = json.loads(pathlib.Path("capacitor.config.json").read_text(encoding="utf-8"))["appId"]
+    pkg_dir = ROOT / "app" / "src" / "main" / "java" / pathlib.Path(*app_id.split("."))
+    source = pathlib.Path("native/FolderBackupPlugin.java").read_text(encoding="utf-8")
+    if ("package %s;" % app_id) not in source:
+        sys.exit("patch-android: FolderBackupPlugin.java package does not match appId %s" % app_id)
+    (pkg_dir / "FolderBackupPlugin.java").write_text(source, encoding="utf-8")
+    main_activity = pkg_dir / "MainActivity.java"
+    sub_required(main_activity, r"(package [^;]+;)", r"\1\n\nimport android.os.Bundle;", "package line")
+    sub_required(
+        main_activity,
+        r"public class MainActivity extends BridgeActivity\s*\{\s*\}",
+        lambda m: "public class MainActivity extends BridgeActivity {\n    @Override\n    public void onCreate(Bundle savedInstanceState) {\n        registerPlugin(FolderBackupPlugin.class);\n        super.onCreate(savedInstanceState);\n    }\n}",
+        "MainActivity class",
+    )
+    sub_required(
+        ROOT / "app" / "build.gradle",
+        r"dependencies\s*\{",
+        lambda m: 'dependencies {\n    implementation "androidx.documentfile:documentfile:1.0.1"',
+        "dependencies block",
+    )
+
+
 def main():
     version_js = pathlib.Path("js/version.js").read_text(encoding="utf-8")
     match = re.search(r"APP_VERSION\s*=\s*'([^']+)'", version_js)
@@ -55,6 +80,7 @@ def main():
     if os.environ.get("KS_PATH"):
         configure_signing(app_gradle)
         print("release signing configured")
+    install_folder_backup_plugin()
     print("patched: minSdk 26, versionCode %s, versionName %s" % (run_number, version_name))
 
 
