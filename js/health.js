@@ -59,33 +59,51 @@ var Health = (function() {
       o.steps = Math.round((o.steps || 0) + v);
     });
 
-    var nights = {};
+    /* Sleep: when real stages (light/deep/REM) exist for a night, only those count. A generic whole-night
+       "sleeping" record also contains the awake time and would overstate the total. */
+    var nights = {}, windows = {};
     (raw.sleep || []).forEach(function(s) {
       if (!s.startDate || !s.endDate || !isAsleep(s)) return;
       var end = new Date(s.endDate), start = new Date(s.startDate);
       if (isNaN(end.getTime()) || isNaN(start.getTime())) return;
-      var k = wakeKey(end);
-      (nights[k] = nights[k] || []).push([start.getTime(), end.getTime()]);
+      var stage = String(s.sleepState || '').toLowerCase().replace(/[^a-z]/g, '');
+      var n = nights[wakeKey(end)] = nights[wakeKey(end)] || { staged: [], generic: [] };
+      (stage === 'light' || stage === 'deep' || stage === 'rem' ? n.staged : n.generic).push([start.getTime(), end.getTime()]);
     });
     Object.keys(nights).forEach(function(k) {
-      var mins = unionMinutes(nights[k]);
-      if (mins > 0) slot(k).sleepH = round1(mins / 60);
+      var iv = nights[k].staged.length ? nights[k].staged : nights[k].generic;
+      var mins = unionMinutes(iv);
+      if (mins <= 0) return;
+      slot(k).sleepH = round1(mins / 60);
+      windows[k] = [Math.min.apply(null, iv.map(function(i) { return i[0]; })), Math.max.apply(null, iv.map(function(i) { return i[1]; }))];
     });
 
-    function averaged(samples, field) {
+    /* Group readings by wake-up day, with their time */
+    function byDay(samples) {
       var acc = {};
       (samples || []).forEach(function(s) {
         var v = parseFloat(s.value), when = s.endDate || s.startDate;
         if (isNaN(v) || v <= 0 || !when) return;
-        var k = wakeKey(new Date(when));   // overnight readings belong to the day you wake up
-        (acc[k] = acc[k] || []).push(v);
+        var t = new Date(when);
+        if (isNaN(t.getTime())) return;
+        (acc[wakeKey(t)] = acc[wakeKey(t)] || []).push({ v: v, t: t.getTime() });
       });
-      Object.keys(acc).forEach(function(k) {
-        slot(k)[field] = round1(acc[k].reduce(function(a, b) { return a + b; }, 0) / acc[k].length);
-      });
+      return acc;
     }
-    averaged(raw.rhr, 'rhr');
-    averaged(raw.hrv, 'hrv');
+    function mean(list) { return list.reduce(function(a, b) { return a + b.v; }, 0) / list.length; }
+
+    /* Resting heart rate: the latest reading */
+    var rhr = byDay(raw.rhr);
+    Object.keys(rhr).forEach(function(k) {
+      slot(k).rhr = round1(rhr[k].sort(function(a, b) { return b.t - a.t; })[0].v);
+    });
+    /* HRV: average over last night's sleep window (daytime readings are lower and not comparable) */
+    var hrv = byDay(raw.hrv);
+    Object.keys(hrv).forEach(function(k) {
+      var w = windows[k];
+      var inSleep = w ? hrv[k].filter(function(x) { return x.t >= w[0] && x.t <= w[1]; }) : [];
+      slot(k).hrv = round1(mean(inSleep.length ? inSleep : hrv[k]));
+    });
     return out;
   }
 

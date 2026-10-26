@@ -404,7 +404,7 @@
       { startDate: at(2026, 9, 19, 23, 0), endDate: at(2026, 9, 20, 7, 0), sleepState: 'sleeping' }
     ] });
     eq(Object.keys(s), ['2026-10-20']);
-    eq(s['2026-10-20'].sleepH, 8);
+    eq(s['2026-10-20'].sleepH, 7.5, 'stage samples only: the whole-night record and the awake gap are not counted');
   });
   t('summarize: evening segment belongs to tomorrow', function() {
     var s = Health.summarize({ sleep: [{ startDate: at(2026, 9, 19, 22, 0), endDate: at(2026, 9, 19, 23, 30), sleepState: 'light' }] });
@@ -419,6 +419,16 @@
     });
     eq(s['2026-10-20'].steps, 8123); eq(s['2026-10-20'].hrv, 65); eq(s['2026-10-20'].rhr, 51);
     eq(s['2026-10-21'], { steps: 100 });
+  });
+  t('summarize: HRV uses the sleep window, resting HR the latest reading', function() {
+    var s = Health.summarize({
+      sleep: [{ startDate: at(2026, 9, 19, 23, 0), endDate: at(2026, 9, 20, 7, 0), sleepState: 'light' }],
+      hrv: [{ endDate: at(2026, 9, 20, 2, 0), value: 70 }, { endDate: at(2026, 9, 20, 4, 0), value: 80 }, { endDate: at(2026, 9, 20, 10, 0), value: 40 }],
+      rhr: [{ startDate: at(2026, 9, 20, 5, 0), value: 48 }, { startDate: at(2026, 9, 20, 13, 0), value: 55 }]
+    });
+    eq(s['2026-10-20'].hrv, 75, 'average of the readings inside the sleep window only');
+    eq(s['2026-10-20'].rhr, 55, 'latest resting HR reading');
+    eq(s['2026-10-20'].sleepH, 8);
   });
   t('summarize tolerates junk', function() {
     eq(Health.summarize({}), {});
