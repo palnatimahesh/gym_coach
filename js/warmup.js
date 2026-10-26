@@ -398,7 +398,7 @@ function renderGuidedStep() {
         '<div class="routine-name">' + Guide.routine.name + '</div>' +
         '<div class="step-label">Step ' + (Guide.stepIndex + 1) + ' of ' + total + '</div>' +
       '</div>' +
-      '<button class="btn btn-ghost btn-sm" onclick="closeGuide()">' + icon('close', 16) + '</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="guideExit()">' + icon('close', 16) + '</button>' +
     '</div>' +
 
     '<div class="guided-progress"><div class="guided-progress-fill" id="guide-progress" style="width:' + pct + '%"></div></div>' +
@@ -668,9 +668,21 @@ function jumpGuideStep(i) {
   renderGuidedStep();
 }
 
-function guideComplete() {
+/* Header X / back button: skips this stage when the guide is part of a guided session */
+function guideExit() {
+  var cb = Guide.onSkip;
+  Guide.onComplete = null; Guide.onSkip = null;
   stopGuide();
   closeGuide();
+  if (cb) cb();
+}
+
+function guideComplete() {
+  var cb = Guide.onComplete;
+  Guide.onComplete = null; Guide.onSkip = null;
+  stopGuide();
+  closeGuide();
+  if (cb) { SoundSystem.stepDone(); cb(); return; }
   SoundSystem.fanfare();
   var type = Guide.type === 'cooldown' ? 'Cooldown' : 'Warmup';
   showToast(type + ' complete. ' + (Guide.type === 'warmup' ? 'Time to train.' : 'Great session.'), 'success');

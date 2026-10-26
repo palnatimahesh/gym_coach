@@ -2,6 +2,7 @@
    Navigates every page, checks tabs / sub-tabs, and starts a circuit session. Result goes to <pre id="smoke">. */
 (function() {
   var errs = [];
+  window.confirm = function() { return true; };   // a real dialog would block the headless run
   window.onerror = function(m, s, l) { errs.push('onerror: ' + m + ' @' + String(s).split('/').pop() + ':' + l); };
   window.addEventListener('load', function() {
     setTimeout(function() {
@@ -21,6 +22,8 @@
           if (expect === 1 && document.getElementById('subtabs').style.display !== 'none') errs.push('subtabs visible on ' + p);
         });
         if (document.querySelectorAll('.nav-item').length !== 5) errs.push('tab count');
+        document.documentElement.setAttribute('data-stage','nutrition');
+        FoodLog.setEnabled(true);
         navigate('nutrition');
         NUTRITION_TABS.forEach(function(tb) {
           setNutritionTab(tb[0]);
@@ -61,6 +64,35 @@
         Progression.setCircuitStyle('rounds'); startSession(0);
         if (!activeWorkout.exercises.some(function(e) { return e._round; })) errs.push('rounds style did not expand');
         Progression.setCircuitStyle('grouped');
+        /* Guided session end to end: warm-up -> all sets with automatic rest -> cooldown -> saved */
+        document.documentElement.setAttribute('data-stage','guided');
+        clearInterval(activeWorkout.elapsedInterval); clearInterval(activeWorkout.restTimer);
+        activeWorkout = { exercises: [], currentExIdx: 0, sets: {}, title: '', startTime: null, restTimer: null, restRemaining: 0, paused: false, elapsedInterval: null, swappedExercises: {}, frozenElapsed: undefined };
+        Progression.setPhase(1, 1);
+        var gi = -1;
+        PROGRAMS.phases[1].schedule.forEach(function(s, i) { if (gi < 0 && s.exercises && s.exercises.length > 2 && !s.massage) gi = i; });
+        var before = HistoryStore.getSessions().length;
+        Player.start(gi);
+        if (!Player.isActive()) errs.push('guided session did not start');
+        var go = document.getElementById('guided-overlay');
+        if (!go || go.classList.contains('hidden') || Guide.routineId !== 'auto_warmup') errs.push('guided warm-up not shown first');
+        guideComplete();
+        var po = document.getElementById('player-overlay');
+        if (!po || po.innerHTML.indexOf('Complete set') === -1 && po.innerHTML.indexOf('Start timer') === -1) errs.push('player did not open after the warm-up');
+        document.documentElement.setAttribute('data-stage','guided-loop');
+        var guard = 0, restsSeen = 0;
+        while (document.getElementById('player-overlay') && guard++ < 400) {
+          if (Player.isResting()) { restsSeen++; Player.skipRest(); continue; }
+          Player.complete();
+        }
+        if (!restsSeen) errs.push('no rest screens appeared');
+        var cg = document.getElementById('guided-overlay');
+        if (!cg || cg.classList.contains('hidden') || Guide.routineId !== 'auto_cooldown') errs.push('cooldown did not follow the last set');
+        guideComplete();
+        var after = HistoryStore.getSessions();
+        if (after.length !== before + 1 || !(after[0].doneSets > 0)) errs.push('guided session was not saved');
+        if (Player.isActive()) errs.push('player still active after finishing');
+        if (document.getElementById('workout-content').innerHTML.indexOf('Session Complete') === -1) errs.push('completion screen missing');
         tap('home', 'dashboard');
         if (document.getElementById('subtabs').style.display !== 'none') errs.push('home shows subtabs');
       } catch (e) {

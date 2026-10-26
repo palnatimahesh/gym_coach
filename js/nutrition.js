@@ -133,21 +133,36 @@ function renderNutrition() {
 
     '';
 
+  var foodOn = FoodLog.enabled();
   var views = {
-    today:  renderFoodToday(T),
-    plan:   planHtml,
+    plan:   renderFoodToggle(foodOn) + planHtml,
     meals:  renderTestosteroneFoods() + renderMealTiming(),
     extras: renderSupplements() + renderHydration()
   };
-  if (!views[NutritionTab]) NutritionTab = 'today';
+  if (foodOn) views.today = renderFoodToday(T);
+  if (!views[NutritionTab]) NutritionTab = foodOn ? 'today' : 'plan';
 
   el('nutrition-content').innerHTML =
     '<div class="top-header"><h2>Nutrition</h2><span class="badge ' + goal.badge + '">' + goal.label + '</span></div>' +
-    '<div class="seg" role="tablist">' + NUTRITION_TABS.map(function(t) {
+    '<div class="seg" role="tablist">' + NUTRITION_TABS.filter(function(t) { return views[t[0]]; }).map(function(t) {
       var on = t[0] === NutritionTab;
       return '<button class="subtab' + (on ? ' active' : '') + '" role="tab" aria-selected="' + on + '" onclick="setNutritionTab(\'' + t[0] + '\')">' + t[1] + '</button>';
     }).join('') + '</div>' +
     views[NutritionTab];
+}
+
+/* ---- Food log on/off ---- */
+function renderFoodToggle(on) {
+  return '<div class="card mb-12" style="display:flex;align-items:center;justify-content:space-between;gap:12px">' +
+    '<div><div style="font-size:0.88rem;font-weight:600">Food log</div>' +
+    '<div style="font-size:0.75rem;color:var(--text-muted)">Log meals against your calorie and protein targets. Turn off to hide it.</div></div>' +
+    '<label class="toggle-switch"><input type="checkbox"' + (on ? ' checked' : '') + ' onchange="setFoodLog(this.checked)"><span class="toggle-thumb"></span></label></div>';
+}
+
+function setFoodLog(on) {
+  FoodLog.setEnabled(on);
+  NutritionTab = on ? 'today' : 'plan';
+  renderNutrition();
 }
 
 /* ---- Today: log meals against the daily targets ---- */

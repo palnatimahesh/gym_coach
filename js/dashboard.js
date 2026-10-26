@@ -70,7 +70,7 @@ function renderDashboard() {
         '</div>' +
       '</div>' +
       '<div class="progress-bar" style="margin-bottom:12px"><div class="progress-fill" style="width:' + getPhaseProgress() + '%;background:' + phColor + '"></div></div>' +
-      (todaySes && !isRest ? renderTodayCompact(todaySes, doneTdy) : renderRestDay(todaySes)) +
+      (todaySes && !isRest ? renderTodayCompact(todaySes, doneTdy, schedIdx) : renderRestDay(todaySes)) +
     '</div>' +
 
     renderWeekStrip(phase) +
@@ -213,7 +213,7 @@ function dashAddWater(litres) {
   renderDashboard();
 }
 
-function renderTodayCompact(session, done) {
+function renderTodayCompact(session, done, dayIdx) {
   var exList = (session.exercises || []).slice(0, 3);
   var more   = (session.exercises || []).length - 3;
   return '<div style="border-top:1px solid rgba(255,255,255,0.07);padding-top:10px">' +
@@ -224,7 +224,7 @@ function renderTodayCompact(session, done) {
       '</div>';
     }).join('') +
     (more > 0 ? '<div style="font-size:0.72rem;color:var(--text-muted);padding-top:2px">+' + more + ' more' + (session.coreFinisher ? ' + core' : '') + '</div>' : '') +
-    '<button class="btn btn-primary btn-full btn-sm" style="margin-top:10px" onclick="navigate(\'workout\')">' +
+    '<button class="btn btn-primary btn-full btn-sm" style="margin-top:10px" onclick="Player.start(' + dayIdx + ')">' +
       (done ? icon('refresh', 14) + ' Redo' : icon('play', 14) + ' Start Session') +
     '</button>' +
   '</div>';

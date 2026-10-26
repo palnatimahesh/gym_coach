@@ -1,4 +1,4 @@
-/* --- TOOLS PAGE --- 1RM Calc, Deload Detector, Pre-Workout Checklist, Superset Builder --- */
+/* --- TOOLS PAGE --- 1RM Calc, Deload Detector, Superset Builder --- */
 
 function renderTools() {
   var deloadAlert = getDeloadStatus();
@@ -11,9 +11,6 @@ function renderTools() {
 
     // Deload alert at top if needed
     (deloadAlert.needed ? renderDeloadAlert(deloadAlert) : '') +
-
-    // Pre-workout checklist
-    renderPreWorkoutChecklist() +
 
     // 1RM Calculator
     render1RMCalculator() +
@@ -78,73 +75,6 @@ function renderDeloadAlert(status) {
 function startDeloadWeek() {
   Progression.forceDeload();
   showToast('Deload week started. Sets halved, loads at 65%.', 'success');
-  renderTools();
-}
-
-//  PRE-WORKOUT CHECKLIST 
-var CHECKLIST_ITEMS = [
-  { id: 'hrv',     label: 'HRV checked',                      sublabel: 'Green = train heavy. Yellow = reduce load 15%. Red = light session only.' },
-  { id: 'sleep',   label: 'Sleep logged (7+ hours?)',          sublabel: 'Under 7hrs  reduce sets, protect CNS.' },
-  { id: 'water',   label: 'Hydrated (500ml before session)',   sublabel: 'Dehydration = -10-20% strength.' },
-  { id: 'meal',    label: 'Pre-workout meal eaten (1-2h ago)', sublabel: 'Banana + protein 60-90 min before.' },
-  { id: 'warmup',  label: 'Warmup planned',                   sublabel: 'Go to Warmup tab and start your pre-session routine.' },
-  { id: 'goal',    label: 'Session goal set',                  sublabel: 'What specifically will you beat today? Weight, reps, or form.' },
-  { id: 'phone',   label: 'Phone on do-not-disturb',          sublabel: 'No notifications. This is your hour.' }
-];
-
-function renderPreWorkoutChecklist() {
-  var saved = STATE.checklist || {};
-
-  return '<div class="section-header"><h3>Pre-Workout Checklist</h3></div>' +
-  '<div class="card mb-16">' +
-    '<p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px">Run this before every session. 2 minutes. Non-negotiable.</p>' +
-    CHECKLIST_ITEMS.map(function(item) {
-      var checked = saved[item.id] || false;
-      return '<div class="toggle-row" style="cursor:pointer" onclick="toggleChecklist(\'' + item.id + '\')">' +
-        '<div style="flex:1;min-width:0;margin-right:12px">' +
-          '<div style="font-size:0.88rem;font-weight:' + (checked ? '600' : '400') + ';color:' + (checked ? 'var(--green)' : 'var(--text-primary)') + '">' +
-            (checked ? icon('check', 14) + ' ' : '') + item.label +
-          '</div>' +
-          '<div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">' + item.sublabel + '</div>' +
-        '</div>' +
-        '<div style="width:22px;height:22px;border-radius:50%;border:2px solid ' + (checked ? 'var(--green)' : 'var(--border)') + ';' +
-          'background:' + (checked ? 'var(--green)' : 'transparent') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
-          (checked ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>' : '') +
-        '</div>' +
-      '</div>';
-    }).join('') +
-    '<div id="checklist-score" style="margin-top:12px">' + renderChecklistScore(saved) + '</div>' +
-  '</div>';
-}
-
-function toggleChecklist(id) {
-  SoundSystem.unlock();
-  if (!STATE.checklist) STATE.checklist = {};
-  STATE.checklist[id] = !STATE.checklist[id];
-  Store.save('settings', STATE.settings);
-  SoundSystem.tick();
-  renderTools();
-}
-
-function renderChecklistScore(saved) {
-  var done  = CHECKLIST_ITEMS.filter(function(i) { return saved[i.id]; }).length;
-  var total = CHECKLIST_ITEMS.length;
-  var pct   = Math.round((done / total) * 100);
-  var color = pct === 100 ? 'var(--green)' : pct >= 70 ? 'var(--yellow)' : 'var(--red)';
-  var label = pct === 100 ? 'Ready to train. Go.' : done + '/' + total + ' complete  finish the checklist';
-
-  return '<div class="progress-bar" style="margin-bottom:6px">' +
-    '<div class="progress-fill" style="width:' + pct + '%;background:' + color + '"></div>' +
-  '</div>' +
-  '<div style="display:flex;justify-content:space-between">' +
-    '<span style="font-size:0.78rem;color:' + color + ';font-weight:600">' + label + '</span>' +
-    '<button class="btn btn-sm btn-ghost" style="font-size:0.72rem;padding:3px 8px" onclick="resetChecklist()">Reset</button>' +
-  '</div>';
-}
-
-function resetChecklist() {
-  STATE.checklist = {};
-  Store.save('settings', STATE.settings);
   renderTools();
 }
 

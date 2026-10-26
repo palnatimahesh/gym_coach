@@ -10,6 +10,15 @@ var FoodLog = (function() {
 
   function all() { return Store.get('meals', {}); }
 
+  /* On/off switch. Until the user decides, it is on only if they already logged meals. */
+  function enabled() {
+    var v = Store.get('foodlog_on', null);
+    if (v !== null) return v === true;
+    var map = all();
+    return Object.keys(map).some(function(d) { return map[d].length > 0; });
+  }
+  function setEnabled(on) { Store.save('foodlog_on', !!on); }
+
   function num(v) {
     if (v === '' || v === null || v === undefined) return null;
     var n = parseFloat(v);
@@ -78,5 +87,5 @@ var FoodLog = (function() {
     return out;
   }
 
-  return { validate: validate, add: add, remove: remove, entries: entries, totals: totals, recent: recent };
+  return { enabled: enabled, setEnabled: setEnabled, validate: validate, add: add, remove: remove, entries: entries, totals: totals, recent: recent };
 })();

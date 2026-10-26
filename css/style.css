@@ -874,3 +874,16 @@ body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 
 .onb-opt.active { border-color: var(--accent); background: var(--accent-dim); }
 .onb-opt-title { font-weight: 700; font-size: 0.95rem; }
 .onb-opt-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+/*  GUIDED SESSION PLAYER  */
+.pl-field { margin-bottom: 14px; }
+.pl-label { text-align: center; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 6px; }
+.pl-stepper { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.pl-btn { width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary); font-size: 1.6rem; font-weight: 700; cursor: pointer; font-family: var(--font); }
+.pl-btn:active { background: var(--accent-dim); }
+.pl-val-wrap { text-align: center; min-width: 110px; }
+.pl-val { width: 110px; text-align: center; font-size: 2.6rem; font-weight: 800; background: transparent; border: none; color: var(--text-primary); font-family: var(--mono); padding: 0; }
+.pl-unit { font-size: 0.72rem; color: var(--text-muted); }
+.pl-target { text-align: center; font-size: 1rem; font-weight: 700; color: var(--accent); margin: 6px 0 14px; }
+.pl-main { padding: 16px; font-size: 1.05rem; }
+.pl-tip { text-align: center; font-size: 0.8rem; color: var(--strain); background: var(--strain-dim); border-radius: var(--radius-sm); padding: 6px 10px; margin-bottom: 8px; }
+.pl-next { text-align: center; color: var(--text-secondary); margin-top: 18px; font-size: 0.95rem; }

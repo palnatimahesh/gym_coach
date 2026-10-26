@@ -111,7 +111,7 @@ function renderSessionSelector(phase, session) {
 
     // Header
     html +=
-      '<div class="exercise-header" onclick="' + (!isRest && !isWalk && !disabled ? 'startSession(' + i + ')' : '') + '" ' +
+      '<div class="exercise-header" onclick="' + (!isRest && !isWalk && !disabled ? 'Player.start(' + i + ')' : '') + '" ' +
         'style="cursor:' + (!isRest && !isWalk && !disabled ? 'pointer' : 'default') + '">' +
         '<div class="exercise-icon" style="background:' + (isRest || isWalk ? 'var(--bg-secondary)' : isMassage ? 'rgba(139,92,246,0.15)' : getCategoryBg(ses.focus)) + ';font-size:1.2rem;width:44px;height:44px">' +
           (isRest ? '' : isWalk ? '' : isMassage ? '' : getSessionEmoji(ses.focus)) +
@@ -173,7 +173,8 @@ function renderSessionSelector(phase, session) {
         html += '<div style="font-size:0.72rem;color:var(--text-muted);margin-top:5px">Done after main exercises.</div></div>';
       }
 
-      html += '<button class="btn btn-primary btn-full btn-sm mt-12" onclick="startSession(' + i + ')">' + icon('play', 14) + ' Start' + (modeInfo && modeInfo.substituted > 0 ? ' (' + modeInfo.substituted + ' auto-swapped)' : '') + '</button>';
+      html += '<button class="btn btn-primary btn-full btn-sm mt-12" onclick="Player.start(' + i + ')">' + icon('play', 14) + ' Start session' + (modeInfo && modeInfo.substituted > 0 ? ' (' + modeInfo.substituted + ' auto-swapped)' : '') + '</button>';
+      html += '<button class="link-btn" onclick="startSession(' + i + ')">Log manually without the guide</button>';
       html += '<button class="link-btn" onclick="Plan.openEditor(' + i + ')">Edit exercises' + (Plan.isEdited(STATE.phase, i) ? ' (customised)' : '') + '</button>';
       html += '</div>';
     }
@@ -560,12 +561,27 @@ function completeSet(key, setIdx) {
     var sx = findSessionExercise(key);
     var finalSet = sx && sx === activeWorkout.exercises[activeWorkout.exercises.length - 1] && setIdx === activeWorkout.sets[key].length - 1;
     var rs = sx ? getRestSeconds(sx) : 0;
-    if (rs > 0 && !finalSet) startRestTimer(rs);
+    if (rs > 0 && !finalSet) { if (Player.isActive()) Player.rest(rs); else startRestTimer(rs); }
+  }
+}
+
+/* After a rest: once every set of the current exercise is done, move on to the next exercise by itself */
+function autoAdvanceAfterRest(fromIdx) {
+  if (activeWorkout.currentExIdx !== fromIdx) return;   // the user already moved on
+  var ex = activeWorkout.exercises[fromIdx];
+  if (!ex) return;
+  var sets = activeWorkout.sets[ex._key || ex.id] || [];
+  var allDone = sets.length > 0 && sets.every(function(s) { return s.done; });
+  if (allDone && fromIdx < activeWorkout.exercises.length - 1) {
+    activeWorkout.currentExIdx = fromIdx + 1;
+    renderWorkout();
+    window.scrollTo(0, 0);
   }
 }
 
 function startRestTimer(seconds) {
   clearInterval(activeWorkout.restTimer);
+  activeWorkout.restIdx = activeWorkout.currentExIdx;
   activeWorkout.restRemaining = seconds;
   var container = el('rest-timer-container');
   if (!container) return;
@@ -591,6 +607,7 @@ function startRestTimer(seconds) {
         if (nx) nextMsg = 'Rest done! Next: ' + nx.name;
       }
       showToast(nextMsg, 'success');
+      autoAdvanceAfterRest(activeWorkout.restIdx);
     }
   }
   tick();
@@ -601,6 +618,7 @@ function skipRest() {
   clearInterval(activeWorkout.restTimer);
   var c = el('rest-timer-container');
   if (c) c.classList.add('hidden');
+  autoAdvanceAfterRest(activeWorkout.restIdx);
 }
 
 function swapExercise(newId) {

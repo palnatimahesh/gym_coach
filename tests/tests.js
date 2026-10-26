@@ -863,6 +863,56 @@
     }).then(function() { delete window.Capacitor; }, function(e) { delete window.Capacitor; throw e; });
   });
 
+  /* ---------- food log switch, tools, auto-advance, player steps ---------- */
+  t('food log switch: default follows usage, explicit choice wins', function() {
+    reset(); eq(FoodLog.enabled(), false, 'off when never used');
+    FoodLog.add({ name: 'x', kcal: 100 }); eq(FoodLog.enabled(), true, 'on once meals exist');
+    FoodLog.setEnabled(false); eq(FoodLog.enabled(), false, 'explicit off wins');
+    FoodLog.setEnabled(true); eq(FoodLog.enabled(), true);
+  });
+  t('nutrition hides the Today tab when the food log is off', function() {
+    reset(); var host = document.createElement('div'); host.id = 'nutrition-content'; document.body.appendChild(host);
+    FoodLog.setEnabled(false); NutritionTab = 'today'; renderNutrition();
+    var labels = [].map.call(host.querySelectorAll('.subtab'), function(b) { return b.textContent; });
+    eq(labels, ['Plan', 'Meals', 'Extras']); eq(NutritionTab, 'plan'); ok(host.innerHTML.indexOf('Food log') !== -1, 'switch card');
+    ok(host.querySelectorAll('.ring-arc').length === 0, 'no logging UI');
+    setFoodLog(true);
+    labels = [].map.call(host.querySelectorAll('.subtab'), function(b) { return b.textContent; });
+    eq(labels, ['Today', 'Plan', 'Meals', 'Extras']); eq(NutritionTab, 'today');
+    document.body.removeChild(host);
+  });
+  t('tools page no longer has the manual checklist', function() {
+    var host = document.createElement('div'); host.id = 'tools-content'; document.body.appendChild(host);
+    renderTools();
+    ok(host.innerHTML.indexOf('Pre-Workout') === -1 && host.innerHTML.indexOf('HRV checked') === -1, 'checklist gone');
+    ok(host.innerHTML.indexOf('1RM') !== -1, 'other tools remain');
+    eq(typeof renderPreWorkoutChecklist, 'undefined');
+    document.body.removeChild(host);
+  });
+  t('after a rest the next exercise opens by itself, but only when appropriate', function() {
+    var realRender = renderWorkout, rendered = 0;
+    renderWorkout = function() { rendered++; };
+    try {
+      activeWorkout = { currentExIdx: 0, exercises: [{ id: 'squat', _key: 'squat_0' }, { id: 'rdl', _key: 'rdl_1' }],
+        sets: { squat_0: [{ done: true }, { done: true }], rdl_1: [{ done: false }] } };
+      autoAdvanceAfterRest(0);
+      eq(activeWorkout.currentExIdx, 1, 'advanced after the last set'); eq(rendered, 1);
+      activeWorkout.currentExIdx = 0; activeWorkout.sets.squat_0[1].done = false;
+      autoAdvanceAfterRest(0); eq(activeWorkout.currentExIdx, 0, 'stays while sets remain');
+      activeWorkout.sets.squat_0[1].done = true; activeWorkout.currentExIdx = 1;
+      autoAdvanceAfterRest(0); eq(activeWorkout.currentExIdx, 1, 'user already moved on');
+      activeWorkout.currentExIdx = 1; activeWorkout.sets.rdl_1[0].done = true;
+      autoAdvanceAfterRest(1); eq(activeWorkout.currentExIdx, 1, 'nothing after the last exercise');
+    } finally { renderWorkout = realRender; }
+  });
+  t('player steps follow exercise then set order', function() {
+    activeWorkout = { exercises: [{ id: 'squat', _key: 'squat_0' }, { id: 'rdl', _key: 'rdl_1' }],
+      sets: { squat_0: [{}, {}, {}], rdl_1: [{}, {}] } };
+    var s = Player.buildSteps();
+    eq(s.length, 5);
+    eq(s.map(function(x) { return x.exIdx + ':' + x.setIdx; }), ['0:0', '0:1', '0:2', '1:0', '1:1']);
+  });
+
   /* ---------- navigation ---------- */
   t('every page belongs to exactly one section', function() {
     PAGES.forEach(function(p) {

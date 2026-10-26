@@ -203,6 +203,7 @@ function startSetTimer(key, setIdx) {
         if (typeof SoundSystem !== 'undefined') SoundSystem.restDone();
         var set = activeWorkout.sets[key] && activeWorkout.sets[key][setIdx];
         if (set && !set.done) { set.reps = String(secs); completeSet(key, setIdx); }
+        Player.afterSet();
         return;
       }
     }

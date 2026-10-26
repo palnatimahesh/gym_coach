@@ -46,8 +46,9 @@ var Native = (function() {
     }
     var swap = el('swap-modal');
     if (swap && swap.classList.contains('open')) { closeSwapModal(); return; }
+    if (Player.isActive() && el('player-overlay')) { Player.exit(); return; }
     var guided = el('guided-overlay');
-    if (guided && !guided.classList.contains('hidden')) { closeGuide(); return; }
+    if (guided && !guided.classList.contains('hidden')) { guideExit(); return; }
     if (typeof SetTimer !== 'undefined' && SetTimer.overlay) { cancelSetTimer(); return; }
     if (STATE.currentPage !== 'dashboard') { navigate('dashboard'); return; }
     var app = plugin('App');
