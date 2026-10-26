@@ -13,7 +13,7 @@ var AutoBackup = (function() {
   var CHECK_MS = 30 * 60 * 1000;
   var NAME_RE = /^backup-\d{4}-\d{2}-\d{2}\.json$/;
   /* Writes that do not make the backup stale (derived or bookkeeping data) */
-  var IGNORE = /^ac_(backupmeta|health|healthSyncAt|healthConnected|schema)$/;
+  var IGNORE = /^ac_(backupmeta|health|healthSyncAt|healthConnected|healthdiag|schema)$/;
 
   var dirty = false, busy = false, timer = null;
 

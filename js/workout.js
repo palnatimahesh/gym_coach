@@ -465,7 +465,9 @@ function startSession(scheduleIndex) {
   var list;
   if (session.circuit && model.rounds) {
     var rounds = Math.max(2, Math.round(model.rounds * Math.min(1, model.setsMult)));
-    list = Progression.expandCircuit(main, rounds, model);
+    list = Progression.getCircuitStyle() === 'rounds'
+      ? Progression.expandCircuit(main, rounds, model)
+      : main.map(function(e) { var c = Object.assign({}, e); c.sets = String(rounds); return c; });
   } else {
     list = main.map(withSets);
   }

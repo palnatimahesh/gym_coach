@@ -125,7 +125,11 @@ function renderSetRow(key, setIdx, setData) {
     inner = numInput(key, setIdx, 'weight', '+' + units, setData.weight, 58, 'decimal') + lbl('+' + units) +
             numInput(key, setIdx, 'reps', 'Reps', setData.reps, 52, 'numeric') + lbl('reps');
   } else if (kind === 'per_side') {
-    inner = numInput(key, setIdx, 'weight', units, setData.weight, 52, 'decimal') + lbl(units) +
+    /* Load is optional only for equipment you can actually load (dumbbell, cable, ...). Bodyweight moves like
+       dead bugs are reps per side only. */
+    var loadable = !REPS_ONLY_EQUIPMENT[(EXERCISES[exId] || {}).equipment];
+    inner = (loadable ? numInput(key, setIdx, 'weight', units, setData.weight, 52, 'decimal') + lbl(units)
+                      : '<div style="flex:1;text-align:center;font-size:0.78rem;color:var(--text-muted)">Bodyweight</div>') +
             numInput(key, setIdx, 'reps', 'Reps', setData.reps, 46, 'numeric') + lbl('reps/side');
   } else if (kind === 'timed' || kind === 'timed_bilateral') {
     var target = ex ? parseTimedSecs(ex.reps) : 0;

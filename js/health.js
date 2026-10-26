@@ -105,24 +105,48 @@ var Health = (function() {
   }
 
   /* ---- plugin calls ---- */
-  function safe(promise) { return promise.then(function(r) { return r; }, function() { return null; }); }
+  function dedupe(list) {
+    var seen = {}, out = [];
+    list.forEach(function(s) {
+      var k = [s.startDate, s.endDate, s.value].join('|');
+      if (!seen[k]) { seen[k] = true; out.push(s); }
+    });
+    return out;
+  }
 
+  /* Two reads per sample type: a short recent window with a large limit (so the newest readings can never be
+     cut off when the plugin returns oldest-first) plus the 30-day history. Errors are recorded, not swallowed. */
   function fetchRaw() {
     var P = plugin();
-    var end = new Date(), start = new Date(end.getTime() - DAYS * 86400000);
-    var range = { startDate: start.toISOString(), endDate: end.toISOString() };
-    function samples(type, limit) {
-      return safe(P.readSamples({ dataType: type, startDate: range.startDate, endDate: range.endDate, limit: limit }));
+    var end = new Date(), errors = {};
+    function win(days) { return { startDate: new Date(end.getTime() - days * 86400000).toISOString(), endDate: end.toISOString() }; }
+    function fail(type) { return function(e) { errors[type] = String((e && e.message) || e); return null; }; }
+    function samples(type, days, limit) {
+      var w = win(days);
+      return P.readSamples({ dataType: type, startDate: w.startDate, endDate: w.endDate, limit: limit })
+        .then(function(r) { return (r && r.samples) || []; }, function(e) { fail(type)(e); return []; });
     }
-    return Promise.all([
-      safe(P.queryAggregated({ dataType: 'steps', startDate: range.startDate, endDate: range.endDate, bucket: 'day', aggregation: 'sum' })),
-      samples('sleep', 3000),
-      samples('restingHeartRate', 500),
-      samples('heartRateVariability', 1500)
-    ]).then(function(r) {
-      function list(x) { return (x && x.samples) || []; }
-      return { steps: list(r[0]), sleep: list(r[1]), rhr: list(r[2]), hrv: list(r[3]) };
+    function both(type, limit) {
+      return Promise.all([samples(type, 3, 5000), samples(type, DAYS, limit)]).then(function(r) { return dedupe(r[0].concat(r[1])); });
+    }
+    var w30 = win(DAYS);
+    var steps = P.queryAggregated({ dataType: 'steps', startDate: w30.startDate, endDate: w30.endDate, bucket: 'day', aggregation: 'sum' })
+      .then(function(r) { return (r && r.samples) || []; }, function(e) { fail('steps')(e); return []; });
+    return Promise.all([steps, both('sleep', 3000), both('restingHeartRate', 500), both('heartRateVariability', 3000)]).then(function(r) {
+      return { raw: { steps: r[0], sleep: r[1], rhr: r[2], hrv: r[3] }, errors: errors };
     });
+  }
+
+  /* What the last read actually returned, shown in Settings so a silent failure is visible */
+  function saveDiag(raw, errors) {
+    var diag = { at: Date.now(), counts: {}, newest: {}, errors: errors };
+    Object.keys(raw).forEach(function(k) {
+      diag.counts[k] = raw[k].length;
+      var newest = '';
+      raw[k].forEach(function(s) { var d = s.endDate || s.startDate || ''; if (d > newest) newest = d; });
+      diag.newest[k] = newest ? dayKey(new Date(newest)) : null;
+    });
+    Store.save('healthdiag', diag);
   }
 
   function connect() {
@@ -143,7 +167,9 @@ var Health = (function() {
     var last = Store.get('healthSyncAt', 0);
     if (!force && Date.now() - last < SYNC_GAP_MS) return Promise.resolve(null);
     if (inflight) return inflight;
-    inflight = fetchRaw().then(function(raw) {
+    inflight = fetchRaw().then(function(res) {
+      var raw = res.raw;
+      saveDiag(raw, res.errors);
       var summary = summarize(raw);
       Store.save('health', merge(Store.get('health', {}), summary));
       Store.save('healthSyncAt', Date.now());

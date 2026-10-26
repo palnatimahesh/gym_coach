@@ -182,6 +182,14 @@ var Progression = (function() {
     return out;
   }
 
+  /* 'grouped' = all sets of a station together (default, best for barbell lifts);
+     'rounds' = rotate through the stations (conditioning style) */
+  function getCircuitStyle() { return Store.get('circuitStyle', 'grouped') === 'rounds' ? 'rounds' : 'grouped'; }
+  function setCircuitStyle(style) {
+    Store.save('circuitStyle', style === 'rounds' ? 'rounds' : 'grouped');
+    renderPage(STATE.currentPage);
+  }
+
   function getReadiness() {
     /* Manual override (the Ready/Tired/Wrecked buttons) wins; otherwise today's readiness zone */
     var r = Store.get('readiness', null);
@@ -272,6 +280,20 @@ var Progression = (function() {
     return html;
   }
 
+  function renderCircuitStyle() {
+    var cur = getCircuitStyle();
+    function chip(id, label) {
+      return '<button class="btn btn-sm ' + (cur === id ? 'btn-primary' : 'btn-secondary') + '" style="flex:1" onclick="Progression.setCircuitStyle(\'' + id + '\')">' + label + '</button>';
+    }
+    return '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">' +
+      '<div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Circuit style</div>' +
+      '<div style="display:flex;gap:8px;margin-bottom:6px">' + chip('grouped', 'Grouped sets') + chip('rounds', 'Rounds') + '</div>' +
+      '<div style="font-size:0.75rem;color:var(--text-muted)">' + (cur === 'grouped'
+        ? 'All sets of one exercise together, then the next. Best for barbell lifts: no plate changes between sets.'
+        : 'One set of every station, then repeat. Short station rests, longer round rest. Best for lighter stations and conditioning.') + '</div>' +
+    '</div>';
+  }
+
   function renderPlanStatus() {
     var m = getSessionModel();
     var cur = getReadiness();
@@ -290,6 +312,7 @@ var Progression = (function() {
       '<div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">How do you feel today?</div>' +
       '<div style="display:flex;gap:8px;margin-bottom:6px">' + chips + '</div>' +
       '<div style="font-size:0.78rem;color:var(--text-muted)">' + READINESS[cur].note + '</div>' +
+      (STATE.phase === 5 ? renderCircuitStyle() : '') +
     '</div>';
   }
 
@@ -311,6 +334,8 @@ var Progression = (function() {
     missedSessions: missedSessions,
     setReadiness: setReadiness,
     adjustSets: adjustSets,
+    getCircuitStyle: getCircuitStyle,
+    setCircuitStyle: setCircuitStyle,
     expandCircuit: expandCircuit,
     renderBanners: renderBanners,
     renderPlanStatus: renderPlanStatus

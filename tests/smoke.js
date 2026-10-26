@@ -57,6 +57,10 @@
         Progression.setPhase(5, 1); STATE.mode = 'gym';
         navigate('workout'); startSession(0);
         if (!activeWorkout.exercises.length) errs.push('circuit session empty');
+        if (activeWorkout.exercises.some(function(e) { return e._round; })) errs.push('circuit should default to grouped sets');
+        Progression.setCircuitStyle('rounds'); startSession(0);
+        if (!activeWorkout.exercises.some(function(e) { return e._round; })) errs.push('rounds style did not expand');
+        Progression.setCircuitStyle('grouped');
         tap('home', 'dashboard');
         if (document.getElementById('subtabs').style.display !== 'none') errs.push('home shows subtabs');
       } catch (e) {

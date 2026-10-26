@@ -106,19 +106,17 @@ function getTodaySessionFocus() {
   return phase.schedule[todayMon] || null;
 }
 
+/* Today's routines are generated from the actual exercises (see warmup-gen.js).
+   Recovery / massage days keep the full mobility routine as the session itself. */
 function getTodayWarmupRecommendation() {
   var session = getTodaySessionFocus();
   if (!session) return null;
-  var combined = ((session.focus || '') + ' ' + (session.split || '')).toLowerCase();
-  for (var i = 0; i < WARMUP_MAP.length; i++) {
-    var map = WARMUP_MAP[i];
-    if (map.keywords.some(function(k) { return combined.indexOf(k) !== -1; })) {
-      return { session: session, map: map, routine: WARMUPS.routines[map.routineId],
-               postRoutine: map.postRoutine ? WARMUPS.routines[map.postRoutine] : null };
-    }
+  if (WarmupGen.kindFor(session) === 'mobility_only') {
+    return { session: session, map: WARMUP_MAP[4], routine: WARMUPS.routines.mobility_only, postRoutine: null };
   }
-  return { session: session, map: WARMUP_MAP[2], routine: WARMUPS.routines['full_body'],
-           postRoutine: WARMUPS.routines['mobility_only'] };
+  var wu = WarmupGen.warmup(session), cd = WarmupGen.cooldown(session);
+  return { session: session, map: { routineId: 'auto_warmup', reason: wu.reason, postRoutine: 'auto_cooldown', postReason: cd.reason },
+           routine: wu, postRoutine: cd };
 }
 
 function getWarmupForDay(dayIndex) {
@@ -126,19 +124,14 @@ function getWarmupForDay(dayIndex) {
   if (!phase || !phase.schedule) return null;
   var session = phase.schedule[dayIndex];
   if (!session) return null;
-  var combined = ((session.focus || '') + ' ' + (session.split || '')).toLowerCase();
   if (session.rest && !session.walk && !session.massage) return { session: session, routineId: null, label: 'Rest', color: 'var(--text-muted)' };
-  for (var i = 0; i < WARMUP_MAP.length; i++) {
-    var map = WARMUP_MAP[i];
-    if (map.keywords.some(function(k) { return combined.indexOf(k) !== -1; })) {
-      return { session: session, routineId: map.routineId, map: map, label: (WARMUPS.routines[map.routineId] || {}).name || map.routineId, color: warmupColor(map.routineId) };
-    }
-  }
-  return { session: session, routineId: 'full_body', label: 'Full Body Warmup', color: '#10b981' };
+  var kind = WarmupGen.kindFor(session);
+  var labels = { upper_body: 'Upper body warm-up', lower_body: 'Lower body warm-up', full_body: 'Full body warm-up', running: 'Pre-run warm-up', mobility_only: 'Recovery mobility' };
+  return { session: session, routineId: kind, map: { postRoutine: kind === 'mobility_only' ? null : 'auto_cooldown' }, label: labels[kind] || 'Warm-up', color: warmupColor(kind) };
 }
 
 function warmupColor(id) {
-  return { upper_body:'#00d4b4', lower_body:'#f59e0b', full_body:'#10b981', running:'#6366f1', mobility_only:'#8b5cf6' }[id] || '#888';
+  return { upper_body:'#00d4b4', lower_body:'#f59e0b', full_body:'#10b981', running:'#6366f1', mobility_only:'#8b5cf6', auto_warmup:'#10b981', auto_cooldown:'#8b5cf6' }[id] || '#888';
 }
 
 /*  TODAY BANNER  */
@@ -186,7 +179,7 @@ function renderTodayWarmupBanner(rec) {
     html += '<div style="background:var(--bg-card);border-radius:var(--radius-md);padding:12px">' +
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
         '<span style="font-size:0.7rem;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:.06em">After Training</span>' +
-        '<span class="badge badge-purple" style="font-size:0.65rem">15-20 min</span>' +
+        '<span class="badge badge-purple" style="font-size:0.65rem">' + rec.postRoutine.duration + '</span>' +
       '</div>' +
       '<div style="font-size:0.88rem;font-weight:600;margin-bottom:4px">Cooldown & Mobility</div>' +
       '<div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.5;margin-bottom:10px">' + ((rec.map || {}).postReason || '') + '</div>' +
@@ -213,7 +206,7 @@ function renderWeeklyWarmupSchedule() {
     var isRest  = ses.rest && !ses.walk && !ses.massage;
     var color   = rec ? rec.color : 'var(--text-muted)';
     var label   = isRest ? 'Rest day' : (rec ? rec.label : 'Full Body Warmup');
-    var preTime = rec && rec.map ? '8-10 min' : '';
+    var preTime = rec && rec.map ? '5-6 min' : '';
     var routId  = rec ? rec.routineId : null;
 
     return '<div style="display:flex;gap:10px;margin-bottom:8px;align-items:flex-start">' +
@@ -230,8 +223,8 @@ function renderWeeklyWarmupSchedule() {
           '<div style="font-size:0.76rem;color:var(--text-muted)">' +
             '<span style="color:' + color + ';font-weight:700">Before:</span> ' + label + (preTime ? ' (' + preTime + ')' : '') +
           '</div>' +
-          (rec && rec.map && rec.map.postRoutine ? '<div style="font-size:0.76rem;color:var(--text-muted);margin-top:2px"><span style="color:#8b5cf6;font-weight:700">After:</span> Cooldown & mobility (15 min)</div>' : '') +
-          (isToday && routId ? '<button class="btn btn-sm btn-primary" style="margin-top:8px;padding:5px 14px;font-size:0.78rem" onclick="SoundSystem.unlock();startGuidedWarmup(\'' + routId + '\',\'warmup\')">' + icon('play', 12) + ' Start Now</button>' : '') :
+          (rec && rec.map && rec.map.postRoutine ? '<div style="font-size:0.76rem;color:var(--text-muted);margin-top:2px"><span style="color:#8b5cf6;font-weight:700">After:</span> Targeted cooldown (about 5 min)</div>' : '') +
+          (isToday && routId ? '<button class="btn btn-sm btn-primary" style="margin-top:8px;padding:5px 14px;font-size:0.78rem" onclick="SoundSystem.unlock();startGuidedWarmup(\'' + (routId === 'mobility_only' ? routId : 'auto_warmup') + '\',\'warmup\')">' + icon('play', 12) + ' Start Now</button>' : '') :
           '<div style="font-size:0.76rem;color:var(--text-muted)">No warmup needed</div>'
         ) +
       '</div>' +
@@ -340,6 +333,8 @@ function toggleWarmupCard(id) {
 
 /*  GUIDED WARMUP PLAYER  */
 function startGuidedWarmup(routineId, type) {
+  /* The generic cooldown button always means "today's targeted cooldown" when one exists */
+  if (type === 'cooldown' && routineId === 'mobility_only' && WARMUPS.routines.auto_cooldown) routineId = 'auto_cooldown';
   var routine = WARMUPS.routines[routineId];
   if (!routine || !routine.exercises || !routine.exercises.length) { showToast('No exercises in this routine.', 'warning'); return; }
 
@@ -380,13 +375,18 @@ function renderGuidedStep() {
   var isMobility  = Guide.type === 'cooldown' || Guide.routineId === 'mobility_only';
   var isBreathing = step.name && step.name.toLowerCase().indexOf('breath') !== -1;
 
-  // Determine if timed or rep-based
-  var stepSecs  = parseDurationToSeconds(step.duration || step.reps || '');
-  var isTimed   = stepSecs > 0;
+  // Timed or rep-based (a timed drill "each side" runs once per side)
+  var info      = parseStep(step);
+  var stepSecs  = info.secs;
+  var isTimed   = info.timed;
   var displayLabel = step.duration || (step.reps ? (String(step.reps) + ' reps') : '');
+  var rd        = splitReps(step);
 
   Guide.totalSeconds = stepSecs;
   Guide.secondsLeft  = stepSecs;
+  Guide.sides        = info.sides;
+  Guide.sideWord     = info.sideWord;
+  Guide.side         = 1;
 
   // Prev/Next arrows
   var arrowL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
@@ -417,7 +417,7 @@ function renderGuidedStep() {
           '</svg>' +
           '<div class="ring-inner">' +
             '<div class="ring-time" id="guide-time" style="color:' + color + '">' + formatTime(stepSecs) + '</div>' +
-            '<div class="ring-label">remaining</div>' +
+            '<div class="ring-label" id="guide-ring-label">' + guideRingLabel() + '</div>' +
           '</div>' +
         '</div>'
       :
@@ -425,10 +425,8 @@ function renderGuidedStep() {
         '<div style="width:160px;height:160px;border-radius:50%;border:8px solid ' + color + ';' +
           'display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 16px;' +
           'background:rgba(0,0,0,0.2)">' +
-          '<div style="font-size:2.6rem;font-weight:800;color:' + color + ';line-height:1">' +
-            (step.reps || step.duration || '--') +
-          '</div>' +
-          '<div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px">reps / sets</div>' +
+          '<div style="font-size:' + (rd.big.length > 4 ? '1.7rem' : '2.6rem') + ';font-weight:800;color:' + color + ';line-height:1;text-align:center">' + esc(rd.big) + '</div>' +
+          '<div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-top:6px;max-width:120px;text-align:center;line-height:1.3">' + esc(rd.small) + '</div>' +
         '</div>'
       ) +
 
@@ -534,6 +532,27 @@ function parseDurationToSeconds(str) {
   return 0; // 0 = rep-based, show reps, no countdown
 }
 
+/* Duration / reps text -> { secs, sides, sideWord, timed }. "90s each side" is a timed drill run once per side. */
+function parseStep(step) {
+  var raw  = String(step.duration || step.reps || '').toLowerCase();
+  var secs = parseDurationToSeconds(step.duration || step.reps || '');
+  var sides = /each|\/\s*side|per side/.test(raw) ? 2 : 1;
+  return { secs: secs, timed: secs > 0, sides: sides, sideWord: /direction/.test(raw) ? 'direction' : 'side' };
+}
+
+/* "10 each side" -> { big: '10', small: 'each side' } so long rep text never overflows the circle */
+function splitReps(step) {
+  var s = String(step.reps !== undefined ? step.reps : (step.duration || '--'));
+  var m = s.match(/^(\d+(?:-\d+)?)\s*(.*)$/);
+  return m ? { big: m[1], small: m[2] || 'reps' } : { big: s, small: '' };
+}
+
+function guideRingLabel() {
+  if (!Guide.sides || Guide.sides < 2) return 'remaining';
+  var names = Guide.sideWord === 'direction' ? ['Direction 1', 'Direction 2'] : ['Side 1', 'Side 2'];
+  return names[Guide.side - 1] + ' of ' + Guide.sides;
+}
+
 function isTimedStep(step) {
   // Returns true if step should show a countdown timer
   var secs = parseDurationToSeconds(step.duration || step.reps || '');
@@ -565,6 +584,18 @@ function startGuideTimer(seconds, color, doBreathing) {
     if (Guide.secondsLeft <= 5 && Guide.secondsLeft > 0) {
       if (timeEl) timeEl.style.color = 'var(--red)';
       SoundSystem.countdown(Guide.secondsLeft);
+    }
+
+    /* Next side / direction of the same drill: restart the countdown instead of moving on */
+    if (Guide.secondsLeft <= 0 && Guide.side < Guide.sides) {
+      Guide.side++;
+      Guide.secondsLeft = total;
+      SoundSystem.stepDone();
+      if (timeEl)  { timeEl.textContent = formatTime(total); timeEl.style.color = color; }
+      if (trackEl) trackEl.style.strokeDashoffset = 0;
+      var sideLbl = el('guide-ring-label');
+      if (sideLbl) sideLbl.textContent = guideRingLabel();
+      return;
     }
 
     if (Guide.secondsLeft <= 0) {
@@ -609,7 +640,7 @@ function toggleGuidePause() {
   var btn = el('guide-play-btn');
   if (btn) btn.innerHTML = icon(Guide.paused ? 'play' : 'pause', 18) + ' ' + (Guide.paused ? 'Resume' : 'Pause');
   var lbl = el('guide-ring-label');
-  if (lbl) lbl.textContent = Guide.paused ? 'paused' : 'remaining';
+  if (lbl) lbl.textContent = Guide.paused ? 'paused' : guideRingLabel();
   if (!Guide.paused) {
     var orb = el('breathing-orb');
     if (orb) startBreathingAnimation();

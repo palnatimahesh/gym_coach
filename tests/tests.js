@@ -748,6 +748,121 @@
     eq(p.length, 1); eq(p[0].schedule.on.weekday, 1);
   });
 
+  /* ---------- warm-up generator, guided steps, set rows, health regression ---------- */
+  t('parseStep: sides, directions and reps', function() {
+    var a = parseStep({ duration: '90s each side' });
+    eq(a.secs, 90); eq(a.sides, 2); eq(a.timed, true);
+    var b = parseStep({ duration: '30s each direction' });
+    eq(b.sides, 2); eq(b.sideWord, 'direction');
+    var c = parseStep({ duration: '60s' });
+    eq(c.sides, 1); eq(c.timed, true);
+    var d = parseStep({ reps: '10 each side' });
+    eq(d.timed, false); eq(d.sides, 2);
+    eq(parseStep({ duration: '45s each' }).sides, 2);
+    eq(parseStep({ reps: 15 }).timed, false);
+    eq(parseStep({ duration: '2 min' }).secs, 120);
+  });
+  t('splitReps keeps long rep text out of the big number', function() {
+    eq(splitReps({ reps: '10 each side' }), { big: '10', small: 'each side' });
+    eq(splitReps({ reps: 15 }), { big: '15', small: 'reps' });
+    eq(splitReps({ reps: '20m' }), { big: '20', small: 'm' });
+    eq(splitReps({ reps: '10 each direction each leg' }).small, 'each direction each leg');
+  });
+  function order(r) { return r.exercises.map(function(e) { var w = WarmupGen.WARM.filter(function(x) { return x.name === e.name; })[0]; return w ? w.stage : 4; }); }
+  t('warm-up is short, targeted and ordered pulse -> mobility -> activation -> ramp', function() {
+    var lower = WarmupGen.warmup({ focus: 'Legs', exercises: [{ id: 'squat' }, { id: 'rdl' }] });
+    var names = lower.exercises.map(function(e) { return e.name; });
+    ok(lower.exercises.length <= 8, 'step count ' + lower.exercises.length);
+    ok(parseInt(lower.duration, 10) <= 8, 'duration ' + lower.duration);
+    ok(names.indexOf('Glute Bridges') !== -1, 'glute activation for squat/hinge');
+    ok(names.indexOf('Band Pull Aparts') === -1 && names.indexOf('Scapular Push-ups') === -1, 'no upper drills on a leg day');
+    var o = order(lower), sorted = o.slice().sort(function(a, b) { return a - b; });
+    eq(o, sorted, 'stage order'); eq(o[0], 1, 'starts with a pulse raiser'); eq(o[o.length - 1], 4, 'ends with the ramp set');
+    var upper = WarmupGen.warmup({ focus: 'Upper', exercises: [{ id: 'bench_press' }, { id: 'barbell_row' }] });
+    var un = upper.exercises.map(function(e) { return e.name; });
+    ok(un.indexOf('Band Pull Aparts') !== -1, 'rear delt / scap activation');
+    ok(un.indexOf('Glute Bridges') === -1 && un.indexOf('Leg Swings (Front/Back)') === -1, 'no leg drills on an upper day');
+  });
+  t('cool-down targets the muscles worked', function() {
+    var legs = WarmupGen.cooldown({ focus: 'Legs', exercises: [{ id: 'squat' }, { id: 'rdl' }] }).exercises.map(function(e) { return e.name; });
+    ok(legs.length <= 6 && legs[0] === 'Diaphragmatic Breathing', 'breathing first, short list');
+    ok(legs.indexOf('Chest Opener (doorway)') === -1, 'no chest stretch after legs');
+    ok(legs.some(function(n) { return /Hip Flexor|Quad|Hamstring|Pigeon/.test(n); }), 'leg stretches');
+    var up = WarmupGen.cooldown({ focus: 'Upper', exercises: [{ id: 'bench_press' }, { id: 'barbell_row' }] }).exercises.map(function(e) { return e.name; });
+    ok(up.indexOf('Hip Flexor Stretch (kneeling)') === -1, 'no hip stretch after upper');
+    ok(up.some(function(n) { return /Chest|Lat|Shoulder/.test(n); }), 'upper stretches');
+  });
+  t('momentum circuit days get full-body warm-ups, not leg or upper ones', function() {
+    PROGRAMS.phases[5].schedule.forEach(function(s) {
+      if (!s.circuit) return;
+      eq(WarmupGen.kindFor(s), 'full_body', s.focus);
+      var r = WarmupGen.warmup(s);
+      ok(r.exercises.length <= 8, 'short for ' + s.focus);
+    });
+  });
+  t('every generated step is playable and registered for the guided player', function() {
+    PROGRAMS.phases.forEach(function(ph) {
+      ph.schedule.forEach(function(s) {
+        if (s.rest && !s.massage) return;
+        var w = WarmupGen.warmup(s), c = WarmupGen.cooldown(s);
+        w.exercises.concat(c.exercises).forEach(function(e) {
+          var i = parseStep(e);
+          ok(i.timed || e.reps !== undefined, 'no timer or reps for ' + e.name);
+        });
+      });
+    });
+    ok(WARMUPS.routines.auto_warmup && WARMUPS.routines.auto_cooldown, 'registered');
+  });
+  t('circuit style defaults to grouped sets', function() {
+    reset(); eq(Progression.getCircuitStyle(), 'grouped');
+    Progression.setCircuitStyle('rounds'); eq(Progression.getCircuitStyle(), 'rounds');
+    Progression.setCircuitStyle('garbage'); eq(Progression.getCircuitStyle(), 'grouped');
+  });
+  t('bodyweight per-side rows have no load box; loadable ones do', function() {
+    activeWorkout = { exercises: [{ id: 'dead_bug', _key: 'dead_bug_0', reps: '10/side' }], sets: {} };
+    var html = renderSetRow('dead_bug_0', 0, { weight: '', reps: '', done: false });
+    ok(html.indexOf('Bodyweight') !== -1, 'bodyweight label');
+    ok(html.indexOf("'weight'") === -1, 'no weight input');
+    ok(html.indexOf('reps/side') !== -1, 'reps per side');
+    ok(html.indexOf('startSetTimer') === -1, 'no timer on a rep exercise');
+    var loadable = Object.keys(PER_SIDE_EXERCISES).filter(function(id) { return EXERCISES[id] && !REPS_ONLY_EQUIPMENT[EXERCISES[id].equipment]; })[0];
+    if (loadable) {
+      activeWorkout = { exercises: [{ id: loadable, _key: loadable + '_0', reps: '8/side' }], sets: {} };
+      ok(renderSetRow(loadable + '_0', 0, { weight: '', reps: '', done: false }).indexOf("'weight'") !== -1, loadable + ' keeps the optional load');
+    }
+  });
+  ta('health sync reads the newest samples even when the plugin returns oldest-first with a limit', function() {
+    reset();
+    var now = Date.now(), hrv = [], i, d;
+    for (d = 40; d >= 0; d--) for (i = 0; i < 150; i++) hrv.push({ startDate: new Date(now - d * 86400000 - i * 60000).toISOString(), endDate: new Date(now - d * 86400000 - i * 60000).toISOString(), value: 50 + (d % 7) });
+    hrv.sort(function(a, b) { return a.endDate < b.endDate ? -1 : 1; });
+    var calls = [];
+    window.Capacitor = { isNativePlatform: function() { return true; }, Plugins: { Health: {
+      isAvailable: function() { return Promise.resolve({ available: true }); },
+      requestAuthorization: function() { return Promise.resolve({}); },
+      readSamples: function(o) {
+        calls.push(o.dataType);
+        if (o.dataType === 'restingHeartRate') return Promise.reject(new Error('permission denied'));
+        if (o.dataType !== 'heartRateVariability') return Promise.resolve({ samples: [] });
+        var out = hrv.filter(function(s) { return s.endDate >= o.startDate && s.endDate <= o.endDate; }).slice(0, o.limit);
+        return Promise.resolve({ samples: out });
+      },
+      queryAggregated: function() { return Promise.resolve({ samples: [{ startDate: new Date(now).toISOString(), value: 4321 }] }); }
+    } } };
+    Store.save('healthConnected', true);
+    return Health.sync(true).then(function() {
+      var latest = Health.latest('hrv');
+      ok(latest, 'hrv stored');
+      var wake = new Date(now);
+      if (wake.getHours() >= 18) wake.setDate(wake.getDate() + 1);   // overnight readings count toward the next wake-up day
+      eq(latest.date, HistoryStore.localDate(wake), 'newest HRV day is the latest one');
+      eq(Health.latest('steps').value, 4321, 'steps stored');
+      var dg = Store.get('healthdiag');
+      ok(dg.errors.restingHeartRate.indexOf('denied') !== -1, 'failure recorded, not swallowed');
+      ok(dg.counts.hrv > 0 && dg.newest.hrv, 'diagnostics show counts and newest day');
+    }).then(function() { delete window.Capacitor; }, function(e) { delete window.Capacitor; throw e; });
+  });
+
   /* ---------- navigation ---------- */
   t('every page belongs to exactly one section', function() {
     PAGES.forEach(function(p) {

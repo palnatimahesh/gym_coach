@@ -197,10 +197,20 @@ function renderHealthCard() {
         '<div style="font-size:0.7rem;color:var(--text-muted)">' + label + '</div>' +
         '<div style="font-size:0.62rem;color:var(--text-muted)">' + (e ? esc(Health.ageLabel(e.date)) : '') + '</div></div>';
     }
+    var dg = Store.get('healthdiag', null);
+    var dgText = '';
+    if (dg) {
+      var names = { sleep: 'Sleep', hrv: 'HRV', rhr: 'Resting HR', steps: 'Steps' };
+      dgText = '<div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:10px;line-height:1.5">Last read: ' + Object.keys(names).map(function(k) {
+        var n = dg.counts[k] || 0;
+        return names[k] + ' ' + n + (n && dg.newest[k] ? ' (newest ' + esc(dg.newest[k].slice(5)) + ')' : '');
+      }).join(', ') + '.' + (dg.errors && Object.keys(dg.errors).length ? '<br><span style="color:var(--red)">Not readable: ' + Object.keys(dg.errors).map(function(k) { return esc(names[k] || k); }).join(', ') + '. Check Manage access.</span>' : '') + '</div>';
+    }
     body = '<div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px">Connected. Last sync: ' + esc(fmtTime(Store.get('healthSyncAt', 0))) + '. Syncs on every app open.</div>' +
       '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">' +
         stat('Sleep h', L.sleepH) + stat('HRV ms', L.hrv) + stat('RHR bpm', L.rhr) + stat('Steps', L.steps) +
       '</div>' +
+      dgText +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
         '<button class="btn btn-secondary btn-sm" onclick="healthSyncNow(this)">Sync now</button>' +
         '<button class="btn btn-secondary btn-sm" onclick="Health.openSettings()">Manage access</button>' +
